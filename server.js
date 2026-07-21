@@ -18,9 +18,11 @@ if (!apiKey) {
   console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
 }
 
+// تهيئة العميل الخاص بالمكتبة الجديدة @google/genai
 const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 app.use(cors());
+// إعداد الحد الأقصى لحجم الطلبات للسماح باستقبال صور Base64 كبيرة
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -28,6 +30,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/api/generate-design', async (req, res) => {
   try {
+    // التحقق من وجود مفتاح API قبل محاولة الاتصال
+    if (!apiKey) {
+      return res.status(500).json({ success: false, error: 'مفتاح API غير مفقود في إعدادات الخادم.' });
+    }
+
     const {
       prompt,
       image,
@@ -44,6 +51,7 @@ app.post('/api/generate-design', async (req, res) => {
       let mimeType = 'image/jpeg';
       let data = rawImage;
 
+      // فصل نوع البيانات (MimeType) عن بيانات الصورة (Base64)
       if (rawImage.includes(';base64,')) {
         const parts = rawImage.split(';base64,');
         mimeType = parts[0].replace('data:', '');
@@ -66,11 +74,12 @@ app.post('/api/generate-design', async (req, res) => {
       fullPrompt += " قدم اقتراحات عامة لنصائح التصميم الداخلي الحديث.";
     }
 
+    // الطريقة المثلى لتمرير المحتوى المدمج (نص + صورة) في المكتبة الجديدة
     const contents = [];
-    contents.push(fullPrompt);
+    contents.push(fullPrompt); // إضافة النص
 
     if (imageInput) {
-      contents.push(imageInput);
+      contents.push(imageInput); // إضافة الصورة إن وجدت
     }
 
     const selectedModel = 'gemini-2.5-flash';
@@ -83,25 +92,19 @@ app.post('/api/generate-design', async (req, res) => {
       }
     });
 
+    // جلب النص النهائي من الرد
     const textOutput = response.text || '';
 
-    let generatedImage = null;
-    if (response.candidates?.[0]?.content?.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          const mime = part.inlineData.mimeType || 'image/png';
-          generatedImage = `data:${mime};base64,${part.inlineData.data}`;
-        }
-      }
-    }
+    // 🔴 تم إزالة الكود الخاص باستخراج الصورة المولدّة هنا 🔴
+    // لأن نماذج Gemini (مثل 2.5-flash) تولد نصوصاً فقط ولا تولد صوراً.
+    // إذا كنت تريد توليد صورة بناءً على الوصف، ستحتاج لاستدعاء نموذج Imagen (imagen-3.0-generate-002) في طلب منفصل.
 
     return res.json({
       success: true,
       result: textOutput,
-      design: textOutput,
       text: textOutput,
-      image: generatedImage,
-      imageUrl: generatedImage,
+      // نترك حقل الصورة فارغاً لتجنب إرسال أخطاء أو بيانات غير موجودة للواجهة الأمامية
+      image: null, 
       modelUsed: selectedModel
     });
 
