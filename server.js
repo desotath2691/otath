@@ -15,14 +15,12 @@ const __dirname = path.dirname(__filename);
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
-  console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
+  console.warn("⚠️ تحذير: مفتاح GEMINI_API_KEY غير مُعرّف في متغيرات البيئة.");
 }
 
-// تهيئة العميل الخاص بالمكتبة الجديدة @google/genai
 const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 app.use(cors());
-// إعداد الحد الأقصى لحجم الطلبات للسماح باستقبال صور Base64 كبيرة
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -30,11 +28,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/api/generate-design', async (req, res) => {
   try {
-    // التحقق من وجود مفتاح API قبل محاولة الاتصال
-    if (!apiKey) {
-      return res.status(500).json({ success: false, error: 'مفتاح API غير مفقود في إعدادات الخادم.' });
-    }
-
     const {
       prompt,
       image,
@@ -51,7 +44,6 @@ app.post('/api/generate-design', async (req, res) => {
       let mimeType = 'image/jpeg';
       let data = rawImage;
 
-      // فصل نوع البيانات (MimeType) عن بيانات الصورة (Base64)
       if (rawImage.includes(';base64,')) {
         const parts = rawImage.split(';base64,');
         mimeType = parts[0].replace('data:', '');
@@ -62,9 +54,10 @@ app.post('/api/generate-design', async (req, res) => {
 
     const imageInput = parseBase64Image(image || imageData);
 
+    // 1. توليد النص الاستشاري عبر Gemini 3.5 Flash Lite
     let fullPrompt = "أنت مصمم ديكور داخلي خبير ومحترف.";
     if (roomType) fullPrompt += ` نوع الغرفة: ${roomType}.`;
-    if (style) fullPrompt += ` الطراز المطلوب: ${style}.`;
+    if style) fullPrompt += ` الطراز المطلوب: ${style}.`;
     if (colors) fullPrompt += ` الألوان المفضلة: ${colors}.`;
     if (budget) fullPrompt += ` الميزانية: ${budget}.`;
     if (prompt) fullPrompt += ` \nتفاصيل وتوجيهات المستخدم: ${prompt}`;
@@ -74,38 +67,53 @@ app.post('/api/generate-design', async (req, res) => {
       fullPrompt += " قدم اقتراحات عامة لنصائح التصميم الداخلي الحديث.";
     }
 
-    // الطريقة المثلى لتمرير المحتوى المدمج (نص + صورة) في المكتبة الجديدة
-    const contents = [];
-    contents.push(fullPrompt); // إضافة النص
-
+    const contents = [fullPrompt];
     if (imageInput) {
-      contents.push(imageInput); // إضافة الصورة إن وجدت
+      contents.push(imageInput);
     }
 
-   const selectedModel = 'gemini-3.6-flash';
+    const textModel = 'gemini-3.5-flash-lite';
+    const textResponse = await ai.models.generateContent({
+      model: textModel,
+      contents: contents,
+      config: {
+        systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
+      }
+    });
 
-const response = await ai.models.generateContent({
-  model: selectedModel,
-  contents: contents,
-  config: {
-    systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
-  }
-});
+    const textOutput = textResponse.text || '';
 
-    // جلب النص النهائي من الرد
-    const textOutput = response.text || '';
+    // 2. توليد صورة تصميم واقعية باستخدام نموذج Imagen لتجنب الخطأ في الواجهة الأمامية
+    let generatedImage = null;
+    try {
+      const imagePromptText = `Interior design rendering of a ${roomType || 'room'} in ${style || 'modern'} style, featuring color palette ${colors || 'neutral'}, high quality, photorealistic, architectural photography`;
+      
+      const imageResponse = await ai.models.generateImages({
+        model: 'imagen-4.0-generate-001',
+        prompt: imagePromptText,
+        config: {
+          numberOfImages: 1,
+          outputMimeType: 'image/jpeg',
+          aspectRatio: '1:1',
+        },
+      });
 
-    // 🔴 تم إزالة الكود الخاص باستخراج الصورة المولدّة هنا 🔴
-    // لأن نماذج Gemini (مثل 2.5-flash) تولد نصوصاً فقط ولا تولد صوراً.
-    // إذا كنت تريد توليد صورة بناءً على الوصف، ستحتاج لاستدعاء نموذج Imagen (imagen-3.0-generate-002) في طلب منفصل.
+      if (imageResponse.generatedImages && imageResponse.generatedImages.length > 0) {
+        const base64Bytes = imageResponse.generatedImages[0].image.imageBytes;
+        generatedImage = `data:image/jpeg;base64,${base64Bytes}`;
+      }
+    } catch (imgError) {
+      console.warn('⚠️ فشل في توليد الصورة عبر Imagen، سيتم المتابعة بالنص فقط:', imgError.message);
+    }
 
     return res.json({
       success: true,
       result: textOutput,
+      design: textOutput,
       text: textOutput,
-      // نترك حقل الصورة فارغاً لتجنب إرسال أخطاء أو بيانات غير موجودة للواجهة الأمامية
-      image: null, 
-      modelUsed: selectedModel
+      image: generatedImage,
+      imageUrl: generatedImage,
+      modelUsed: textModel
     });
 
   } catch (error) {
@@ -122,7 +130,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'Otath Backend', 
-    model: 'gemini-3.6-flash',
+    model: 'gemini-3.5-flash-lite',
     apiKeyConfigured: !!process.env.GEMINI_API_KEY 
   });
 });
@@ -133,5 +141,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
-  console.log('📱 Gemini SDK configured with model: gemini-3.6-flash');
+  console.log(`📱 Server configured with Gemini 3.5 Flash-Lite & Imagen`);
 });
