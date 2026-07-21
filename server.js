@@ -73,8 +73,10 @@ app.post('/api/generate-design', async (req, res) => {
       contents.push(imageInput);
     }
 
+    const selectedModel = 'gemini-2.5-flash';
+
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: selectedModel,
       contents: contents,
       config: {
         systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
@@ -100,7 +102,7 @@ app.post('/api/generate-design', async (req, res) => {
       text: textOutput,
       image: generatedImage,
       imageUrl: generatedImage,
-      modelUsed: 'gemini-2.5-flash'
+      modelUsed: selectedModel
     });
 
   } catch (error) {
@@ -114,7 +116,12 @@ app.post('/api/generate-design', async (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'Otath Backend', model: 'gemini-2.5-flash' });
+  res.json({ 
+    status: 'ok', 
+    service: 'Otath Backend', 
+    model: 'gemini-2.5-flash',
+    apiKeyConfigured: !!process.env.GEMINI_API_KEY 
+  });
 });
 
 app.get('*', (req, res) => {
