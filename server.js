@@ -82,15 +82,15 @@ app.post('/api/generate-design', async (req, res) => {
       contents.push(imageInput); // إضافة الصورة إن وجدت
     }
 
-    const selectedModel = 'gemini-2.5-flash';
+   const selectedModel = 'gemini-1.5-flash';
 
-    const response = await ai.models.generateContent({
-      model: selectedModel,
-      contents: contents,
-      config: {
-        systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
-      }
-    });
+const response = await ai.models.generateContent({
+  model: selectedModel,
+  contents: contents,
+  config: {
+    systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
+  }
+});
 
     // جلب النص النهائي من الرد
     const textOutput = response.text || '';
