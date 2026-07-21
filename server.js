@@ -82,7 +82,7 @@ app.post('/api/generate-design', async (req, res) => {
       contents.push(imageInput); // إضافة الصورة إن وجدت
     }
 
-   const selectedModel = 'gemini-1.5-flash';
+   const selectedModel = 'gemini-flash';
 
 const response = await ai.models.generateContent({
   model: selectedModel,
