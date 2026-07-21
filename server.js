@@ -1,179 +1,137 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
-const rateLimit = require('express-rate-limit');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb' }));
-app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
-    credentials: true
-}));
+// Setup __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Serve static files (HTML, CSS, JS)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Rate limiting - prevent abuse
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // limit each IP to 10 requests per windowMs
-    message: 'تم تجاوز حد الطلبات. يرجى المحاولة لاحقاً.',
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-
-app.use('/api/', limiter);
-
-// Validation middleware
-function validateGenerationRequest(req, res, next) {
-    const { prompt, imageBase64, imageMimeType } = req.body;
-    
-    if (!prompt || !imageBase64 || !imageMimeType) {
-        return res.status(400).json({
-            error: 'Missing required fields: prompt, imageBase64, imageMimeType'
-        });
-    }
-    
-    if (imageBase64.length > 5 * 1024 * 1024) {
-        return res.status(400).json({
-            error: 'Image data exceeds maximum size (5MB)'
-        });
-    }
-    
-    if (prompt.length > 2000) {
-        return res.status(400).json({
-            error: 'Prompt exceeds maximum length (2000 characters)'
-        });
-    }
-    
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(imageMimeType)) {
-        return res.status(400).json({
-            error: 'Invalid image mime type. Supported: image/jpeg, image/png, image/webp'
-        });
-    }
-    
-    next();
+// Initialize Google Gen AI SDK using GEMINI_API_KEY from environment variables
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
 }
 
-// Main API endpoint
-app.post('/api/generate-design', validateGenerationRequest, async (req, res) => {
-    try {
-        const { prompt, imageBase64, imageMimeType } = req.body;
-        
-        // Verify API key is configured
-        if (!process.env.GEMINI_API_KEY) {
-            return res.status(500).json({
-                error: 'Server configuration error: Missing API key'
-            });
-        }
-        
-        // Prepare payload for Gemini API
-        const payload = {
-            contents: [{
-                role: "user",
-                parts: [
-                    { text: prompt },
-                    {
-                        inlineData: {
-                            mimeType: imageMimeType,
-                            data: imageBase64
-                        }
-                    }
-                ]
-            }],
-            generationConfig: {
-                responseModalities: ['IMAGE']
-            }
-        };
-        
-        // Call Gemini API
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${process.env.GEMINI_API_KEY}`;
-        
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload),
-            timeout: 120000 // 2 minute timeout
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Gemini API Error:', errorData);
-            
-            return res.status(response.status).json({
-                error: `Gemini API error: ${response.statusText}`,
-                details: errorData
-            });
-        }
-        
-        const result = await response.json();
-        
-        // Extract generated image from response
-        const imageContent = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-        
-        if (!imageContent) {
-            return res.status(500).json({
-                error: 'No image content in API response'
-            });
-        }
-        
-        // Return the generated image
-        res.json({
-            imageBase64: imageContent.inlineData.data,
-            imageMimeType: imageContent.inlineData.mimeType,
-            success: true
-        });
-        
-    } catch (error) {
-        console.error('Generation error:', error);
-        
-        res.status(500).json({
-            error: 'Failed to generate image design',
-            message: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
+
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve static frontend files from 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.post('/api/generate-design', async (req, res) => {
+  try {
+    const {
+      prompt,
+      image,
+      imageData,
+      roomType,
+      style,
+      colors,
+      budget,
+      additionalNotes
+    } = req.body;
+
+    // Helper function to extract base64 data and mimeType
+    const parseBase64Image = (rawImage) => {
+      if (!rawImage) return null;
+      let mimeType = 'image/jpeg';
+      let data = rawImage;
+
+      if (rawImage.includes(';base64,')) {
+        const parts = rawImage.split(';base64,');
+        mimeType = parts[0].replace('data:', '');
+        data = parts[1];
+      }
+      return { inlineData: { data, mimeType } };
+    };
+
+    const imageInput = parseBase64Image(image || imageData);
+
+    // Build systemic prompt context for interior design analysis/generation
+    let fullPrompt = "أنت مصمم ديكور داخلي خبير ومحترف.";
+    if (roomType) fullPrompt += ` نوع الغرفة: ${roomType}.`;
+    if (style) fullPrompt += ` الطراز المطلوب: ${style}.`;
+    if (colors) fullPrompt += ` الألوان المفضلة: ${colors}.`;
+    if (budget) fullPrompt += ` الميزانية: ${budget}.`;
+    if (prompt) fullPrompt += ` \nتفاصيل وتوجيهات المستخدم: ${prompt}`;
+    if (additionalNotes) fullPrompt += ` \nملاحظات إضافية: ${additionalNotes}`;
+
+    if (!prompt && !imageInput) {
+      fullPrompt += " قدم اقتراحات عامة لنصائح التصميم الداخلي الحديث.";
     }
-});
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+    // Assemble input contents array
+    const contents = [];
+    contents.push(fullPrompt);
 
-// Serve index.html for all other routes (SPA fallback)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+    if (imageInput) {
+      contents.push(imageInput);
+    }
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Server error:', err);
-    res.status(500).json({
-        error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-flash-image',
+      contents: contents,
+      config: {
+        systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
+      }
     });
+
+    const textOutput = response.text || '';
+    
+    // Check if the response contains inline images (if model generated image output)
+    let generatedImage = null;
+    if (response.candidates?.[0]?.content?.parts) {
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          const mime = part.inlineData.mimeType || 'image/png';
+          generatedImage = `data:${mime};base64,${part.inlineData.data}`;
+        }
+      }
+    }
+
+    // Return backwards-compatible response structure matching front-end needs
+    return res.json({
+      success: true,
+      result: textOutput,
+      design: textOutput,
+      text: textOutput,
+      image: generatedImage,
+      imageUrl: generatedImage,
+      modelUsed: 'gemini-3.1-flash-image'
+    });
+
+  } catch (error) {
+    console.error('Error generating design:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'حدث خطأ أثناء معالجة الطلب عبر Gemini API',
+      details: error.message
+    });
+  }
 });
 
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({ error: 'Not found' });
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'Otath Backend', model: 'gemini-3.1-flash-image' });
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📱 Frontend: http://localhost:${PORT}`);
-    console.log(`🔌 API endpoint: http://localhost:${PORT}/api/generate-design`);
-    console.log(`✅ Health check: http://localhost:${PORT}/api/health`);
+// Serve frontend index.html for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-module.exports = app;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`📱 Gemini SDK configured with model: gemini-3.1-flash-image`);
+});
