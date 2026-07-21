@@ -79,7 +79,7 @@ app.post('/api/generate-design', async (req, res) => {
       contents.push(imageInput);
     }
 
-    const textModel = 'gemini-2.5-flash';
+    const textModel = 'gemini-3.5-flash';
 
     // 1️⃣ استدعاء Gemini لتحليل الغرفة وإنشاء الاقتراحات النصية
     const textResponse = await ai.models.generateContent({
@@ -139,7 +139,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'Otath Backend', 
-    models: ['gemini-2.5-flash', 'imagen-3.0-generate-002'],
+    models: ['gemini-3.5-flash', 'imagen-3.0-generate-002'],
     apiKeyConfigured: !!process.env.GEMINI_API_KEY 
   });
 });
@@ -150,5 +150,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
-  console.log('📱 Gemini SDK configured with Gemini 2.5 Flash & Imagen 3');
+  console.log('📱 Gemini SDK configured with Gemini 3.5 Flash & Imagen 3');
 });
