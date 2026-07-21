@@ -82,7 +82,7 @@ app.post('/api/generate-design', async (req, res) => {
       contents.push(imageInput); // إضافة الصورة إن وجدت
     }
 
-   const selectedModel = 'gemini-flash';
+   const selectedModel = 'gemini-2.5-pro';
 
 const response = await ai.models.generateContent({
   model: selectedModel,
@@ -122,7 +122,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'Otath Backend', 
-    model: 'gemini-2.5-flash',
+    model: 'gemini-2.5-pro',
     apiKeyConfigured: !!process.env.GEMINI_API_KEY 
   });
 });
@@ -133,5 +133,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`📱 Gemini SDK configured with model: gemini-2.5-flash`);
+  console.log(`📱 Gemini SDK configured with model:'gemini-flash');
 });
