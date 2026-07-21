@@ -10,9 +10,9 @@
         @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700&display=swap');
         
         :root {
-            --brand-primary: #292524; /* Stone 900 */
-            --brand-accent: #b45309; /* Amber 700 - Warm elegant tone */
-            --brand-bg: #fafaf9; /* Stone 50 */
+            --brand-primary: #292524;
+            --brand-accent: #b45309;
+            --brand-bg: #fafaf9;
         }
 
         body {
@@ -21,7 +21,6 @@
             color: var(--brand-primary);
         }
 
-        /* Custom Scrollbar for elegance */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -67,7 +66,7 @@
 
         .product-card.selected {
             border-color: var(--brand-accent);
-            background-color: #fffbeb; /* amber-50 */
+            background-color: #fffbeb;
         }
         
         .product-card.selected .check-icon {
@@ -141,25 +140,18 @@
     </header>
 
     <main class="flex-grow container mx-auto px-4 py-8 md:py-12 max-w-7xl">
-        
-        <!-- Hero Text -->
         <div class="text-center mb-12">
             <h2 class="text-4xl md:text-5xl font-bold mb-4 text-stone-900 tracking-tight">تخيّل مساحتك بشكل <span class="text-amber-700">مختلف</span></h2>
             <p class="text-stone-500 text-lg md:text-xl max-w-2xl mx-auto font-light">ارفع صورة غرفتك الحالية، اختر من تشكيلتنا الفاخرة، ودع الذكاء الاصطناعي يدمجها في مساحتك بواقعية مذهلة.</p>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            <!-- Left Side: Controls & Tools (5 columns on large screens) -->
             <div class="lg:col-span-5 space-y-6">
-                
-                <!-- Step 1: Upload -->
                 <div class="glass-panel p-6 rounded-2xl">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-8 h-8 rounded-full bg-stone-100 text-stone-900 flex items-center justify-center font-bold text-sm">1</div>
                         <h3 class="text-lg font-semibold">صورة المساحة</h3>
                     </div>
-                    
                     <div id="upload-zone" class="upload-area rounded-xl p-8 text-center cursor-pointer relative overflow-hidden group">
                         <input type="file" id="image-input" accept="image/jpeg, image/png, image/webp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                         <div id="upload-content" class="pointer-events-none transition-transform duration-300 group-hover:scale-105">
@@ -171,7 +163,6 @@
                         </div>
                         <img id="preview-thumbnail" src="" alt="معاينة" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl">
                     </div>
-                    
                     <button id="clear-image-btn" class="mt-4 text-red-500 text-sm hover:text-red-700 hidden w-full flex items-center justify-center gap-2 font-medium">
                         <i class="fa-solid fa-trash-can"></i> إزالة الصورة
                     </button>
@@ -183,16 +174,11 @@
                         <h3 class="text-lg font-semibold">اختر قطع الأثاث</h3>
                     </div>
                     <p class="text-sm text-stone-500 mb-4">اختر القطع التي تود رؤيتها في مساحتك (يمكنك اختيار أكثر من قطعة).</p>
-                    
-                    <!-- Search bar for products -->
                     <div class="relative mb-4">
                         <i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"></i>
                         <input type="text" id="search-input" placeholder="ابحث في المنتجات..." class="w-full pl-4 pr-10 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 transition-colors text-sm">
                     </div>
-
-                    <!-- Products Grid -->
                     <div class="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2" id="products-container">
-                        <!-- Product cards will be generated here by JS -->
                     </div>
                 </div>
 
@@ -202,7 +188,6 @@
                         <h3 class="text-lg font-semibold">تخصيص التصميم <span class="text-xs font-normal text-stone-400">(اختياري)</span></h3>
                     </div>
                     <textarea id="prompt-input" rows="2" placeholder="مثال: ضع الكنبة بجوار النافذة وأضف إضاءة مسائية دافئة..." class="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600 resize-none mb-5 text-sm transition-colors"></textarea>
-                    
                     <button id="generate-btn" class="w-full bg-stone-900 hover:bg-stone-800 text-white font-medium py-4 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden" disabled>
                         <span class="relative z-10 flex items-center gap-2">
                             <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -215,8 +200,6 @@
 
             <div class="lg:col-span-7 h-full min-h-[500px]">
                 <div class="glass-panel p-2 rounded-2xl h-full flex flex-col relative overflow-hidden bg-white shadow-sm border border-stone-100">
-                    
-                    <!-- Toolbar for the result -->
                     <div class="absolute top-4 left-4 right-4 flex justify-between items-center z-20 pointer-events-none">
                         <div class="pointer-events-auto bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-sm border border-stone-100 text-sm font-medium text-stone-700 hidden" id="result-badge">
                             <i class="fa-solid fa-check text-green-500 ml-1"></i> اكتمل التصميم
@@ -225,11 +208,7 @@
                             <i class="fa-solid fa-arrow-down"></i> حفظ الصورة
                         </button>
                     </div>
-                    
-                    <!-- Main Image Display Area -->
                     <div id="canvas-container" class="flex-grow rounded-xl overflow-hidden relative flex items-center justify-center bg-stone-100 w-full h-full min-h-[600px]">
-                        
-                        <!-- Empty State -->
                         <div id="canvas-placeholder" class="text-center p-8 absolute inset-0 flex flex-col items-center justify-center">
                             <div class="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm">
                                 <i class="fa-thin fa-image text-4xl text-stone-300"></i>
@@ -237,16 +216,11 @@
                             <h3 class="text-xl font-medium text-stone-600 mb-2">مساحة التصميم فارغة</h3>
                             <p class="text-stone-400 max-w-sm">قم برفع صورة الغرفة واختيار الأثاث للبدء في تصميم مساحتك المثالية.</p>
                         </div>
-
-                        <!-- Main Image Element (Original or Generated) -->
                         <img id="main-canvas" alt="تصميم الغرفة" class="w-full h-full object-contain hidden opacity-0 transition-opacity duration-500">
-
                         <div id="loading-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center hidden">
                             <div class="elegant-loader mb-6"></div>
                             <h3 class="text-xl font-bold text-stone-800 mb-2">جاري تصميم مساحتك...</h3>
                             <p class="text-stone-500 text-sm max-w-sm text-center">يقوم الذكاء الاصطناعي الآن بدمج قطع الأثاث المختارة مع مراعاة الأبعاد، زوايا الرؤية، والإضاءة الخاصة بغرفتك.</p>
-                            
-                            <!-- Fake progress steps for better UX -->
                             <div class="mt-8 space-y-3 w-64">
                                 <div class="flex items-center gap-3 text-sm text-stone-400" id="step-1">
                                     <i class="fa-solid fa-circle-check text-green-500"></i> تحليل أبعاد الغرفة
@@ -265,343 +239,6 @@
         </div>
     </main>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // DOM Elements
-            const uploadZone = document.getElementById('upload-zone');
-            const imageInput = document.getElementById('image-input');
-            const uploadContent = document.getElementById('upload-content');
-            const previewThumbnail = document.getElementById('preview-thumbnail');
-            const clearImageBtn = document.getElementById('clear-image-btn');
-            
-            const productsContainer = document.getElementById('products-container');
-            const searchInput = document.getElementById('search-input');
-            const generateBtn = document.getElementById('generate-btn');
-            const promptInput = document.getElementById('prompt-input');
-            
-            const mainCanvas = document.getElementById('main-canvas');
-            const canvasPlaceholder = document.getElementById('canvas-placeholder');
-            const loadingOverlay = document.getElementById('loading-overlay');
-            const downloadBtn = document.getElementById('download-btn');
-            const resultBadge = document.getElementById('result-badge');
-
-            // State
-            let baseImageBase64 = null;
-            let selectedProducts = [];
-
-            const otathProducts = [
-                {
-                    id: 'green-american-sofa-2seater',
-                    name: 'كنب أمريكي ثنائي مميز باللون الأخضر',
-                    category: 'جلوس',
-                    imageUrl: 'https://cdn.salla.sa/QWgA/dcecbd68-c925-4442-966f-0f1d9cfd3507-1000x1000-XOgfpww34ogMhM9eKn7LGB12u55y1d7HtDwNNfXh.jpg',
-                    aiPrompt: 'A premium American-style two-seater sofa upholstered in elegant green fabric with a modern design'
-                },
-                {
-                    id: 'gray-lounge-chair',
-                    name: 'كرسي داخلي رمادي فاتح بتصميم مريح',
-                    category: 'جلوس',
-                    imageUrl: 'https://cdn.salla.sa/QWgA/babbc5ea-cb18-4513-8f29-b8c275b5af99-1000x666.66666666667-BddnYkF9DNAcVR1uKWQKot09H8z1fl2xsKnIEaRl.png',
-                    aiPrompt: 'A comfortable light gray upholstered lounge chair with a modern minimalist design'
-                },
-                {
-                    id: 'marble-coffee-table-gold',
-                    name: 'طقم طاولة ضيافة رخام أبيض/قاعدة ذهبي',
-                    category: 'طاولات',
-                    imageUrl: 'https://cdn.salla.sa/QWgA/8vNBh59aWwgtad5lZfwA9VOStqflr6oOrmeU9r03.png',
-                    aiPrompt: 'A luxury white marble coffee table set with elegant gold metal legs'
-                },
-                {
-                    id: 'clothes-rack-gray',
-                    name: 'علاقة ملابس أرضية معدنية بلون رمادي – تصميم أنيق',
-                    category: 'ديكور',
-                    imageUrl: 'https://cdn.salla.sa/QWgA/229408b8-18bc-4928-bcb7-2d3e5e46b4fe-1000x1000-fdf4OlM7Ch0h6e0Y7gUV3UN91T27viRuqzKGDlbm.png',
-                    aiPrompt: 'A modern gray metal freestanding clothes rack with a minimalist design'
-                },
-                {
-                    id: 'floor-lamp-marble',
-                    name: 'إضاءة أرضية بتصميم كروي فاخر وقاعدة رخامية',
-                    category: 'إضاءة',
-                    imageUrl: 'https://cdn.salla.sa/QWgA/26fb96e1-bef8-4685-afc8-d3b736368da3-1000x1000-6dPDIydZE29prnqTDv9OMw8TfsGoR3SfgbkM6UdD.png',
-                    aiPrompt: 'A luxury floor lamp with a spherical glass shade and a marble base'
-                },
-                {
-                    id: 'bed-white-king',
-                    name: 'سرير معدني أبيض ملكي – أكبر مساحة نوم للراحة القصوى مقاس 180x200 سم',
-                    category: 'غرف نوم',
-                    imageUrl: 'https://cdn.salla.sa/QWgA/7a866997-964b-43b0-8347-0c8ddc03bf17-1000x1000-x9euu2zmfwz6fbHzXQ8wXExtgb0PpDEFDLzp49yp.png',
-                    aiPrompt: 'A luxurious white metal king-size bed with a modern design'
-                }
-            ];
-
-            function showToast(message, type = 'info') {
-                const toast = document.createElement('div');
-                toast.className = `toast ${type === 'error' ? 'bg-red-600' : 'bg-stone-800'}`;
-                toast.textContent = message;
-                document.body.appendChild(toast);
-                setTimeout(() => {
-                    toast.remove();
-                }, 3000);
-            }
-
-            function renderProducts(filter = '') {
-                productsContainer.innerHTML = '';
-                const filteredProducts = otathProducts.filter(p => 
-                    p.name.includes(filter) || p.category.includes(filter)
-                );
-                
-                filteredProducts.forEach(product => {
-                    const card = document.createElement('div');
-                    card.className = 'product-card bg-white rounded-xl p-3 cursor-pointer relative overflow-hidden group shadow-sm border border-stone-100';
-                    card.dataset.id = product.id;
-                    
-                    card.innerHTML = `
-                        <div class="absolute top-2 left-2 z-10 w-6 h-6 bg-amber-600 rounded-full text-white flex items-center justify-center check-icon shadow-md">
-                            <i class="fa-solid fa-check text-xs"></i>
-                        </div>
-                        <div class="h-28 rounded-lg mb-3 overflow-hidden bg-stone-100 relative">
-                            <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                        </div>
-                        <div class="px-1">
-                            <span class="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1 block">${product.category}</span>
-                            <h4 class="font-semibold text-sm text-stone-800 leading-tight mb-1">${product.name}</h4>
-                        </div>
-                    `;
-
-                    card.addEventListener('click', () => {
-                        const isSelected = card.classList.contains('selected');
-                        if (isSelected) {
-                            card.classList.remove('selected');
-                            selectedProducts = selectedProducts.filter(p => p.id !== product.id);
-                        } else {
-                            card.classList.add('selected');
-                            selectedProducts.push(product);
-                        }
-                        checkReadyState();
-                    });
-
-                    productsContainer.appendChild(card);
-                });
-            }
-
-            renderProducts();
-
-            searchInput.addEventListener('input', (e) => {
-                renderProducts(e.target.value);
-            });
-
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                uploadZone.addEventListener(eventName, preventDefaults, false);
-            });
-
-            function preventDefaults(e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-
-            ['dragenter', 'dragover'].forEach(eventName => {
-                uploadZone.addEventListener(eventName, () => uploadZone.classList.add('dragover'), false);
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                uploadZone.addEventListener(eventName, () => uploadZone.classList.remove('dragover'), false);
-            });
-
-            uploadZone.addEventListener('drop', (e) => {
-                const dt = e.dataTransfer;
-                const files = dt.files;
-                handleFiles(files);
-            });
-
-            imageInput.addEventListener('change', function() {
-                handleFiles(this.files);
-            });
-
-            function handleFiles(files) {
-                if (files.length === 0) return;
-                const file = files[0];
-                
-                if (!file.type.startsWith('image/')) {
-                    showToast('عذراً، يرجى رفع ملف صورة صالح (JPG, PNG).', 'error');
-                    return;
-                }
-
-                if (file.size > 5 * 1024 * 1024) {
-                    showToast('حجم الصورة كبير جداً. الحد الأقصى 5 ميجابايت.', 'error');
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onloadend = function() {
-                    baseImageBase64 = reader.result;
-                    
-                    previewThumbnail.src = baseImageBase64;
-                    previewThumbnail.classList.remove('hidden');
-                    uploadContent.classList.add('opacity-0');
-                    clearImageBtn.classList.remove('hidden');
-                    clearImageBtn.classList.add('flex');
-                    
-                    showImageInCanvas(baseImageBase64);
-                    
-                    resultBadge.classList.add('hidden');
-                    downloadBtn.classList.add('hidden');
-                    downloadBtn.classList.remove('flex');
-
-                    checkReadyState();
-                }
-            }
-
-            clearImageBtn.addEventListener('click', () => {
-                baseImageBase64 = null;
-                
-                previewThumbnail.src = '';
-                previewThumbnail.classList.add('hidden');
-                uploadContent.classList.remove('opacity-0');
-                clearImageBtn.classList.add('hidden');
-                clearImageBtn.classList.remove('flex');
-                imageInput.value = '';
-                
-                mainCanvas.src = '';
-                mainCanvas.classList.add('hidden', 'opacity-0');
-                canvasPlaceholder.style.display = 'flex';
-                resultBadge.classList.add('hidden');
-                downloadBtn.classList.add('hidden');
-                downloadBtn.classList.remove('flex');
-                
-                checkReadyState();
-            });
-
-            function showImageInCanvas(src) {
-                canvasPlaceholder.style.display = 'none';
-                mainCanvas.src = src;
-                mainCanvas.classList.remove('hidden');
-                setTimeout(() => {
-                    mainCanvas.classList.remove('opacity-0');
-                }, 50);
-            }
-
-            function checkReadyState() {
-                if (baseImageBase64 && selectedProducts.length > 0) {
-                    generateBtn.disabled = false;
-                } else {
-                    generateBtn.disabled = true;
-                }
-            }
-
-            generateBtn.addEventListener('click', async () => {
-                if (!baseImageBase64 || selectedProducts.length === 0) return;
-
-                loadingOverlay.style.display = 'flex';
-                generateBtn.disabled = true;
-                downloadBtn.classList.add('hidden');
-                downloadBtn.classList.remove('flex');
-                resultBadge.classList.add('hidden');
-                
-                simulateProgressSteps();
-
-                const productsPrompt = selectedProducts.map(p => p.aiPrompt).join(' and ');
-                const userPrompt = promptInput.value.trim();
-                
-                let fullPrompt = `Act as an expert interior designer and 3D architectural visualizer. Modify this photo of a room by seamlessly and realistically integrating the following furniture pieces into the space: ${productsPrompt}. Ensure perfect perspective, accurate scale/proportions, natural lighting, and realistic shadows that match the original room's environment. The final image should look like a real, unedited photograph of a high-end home.`;
-                
-                if (userPrompt) {
-                    fullPrompt += ` Additional specific customer request: ${userPrompt}.`;
-                }
-                
-                try {
-                    const base64DataRaw = baseImageBase64.split(',')[1];
-                    const mimeType = baseImageBase64.split(';')[0].split(':')[1];
-
-                    const payload = {
-                        prompt: fullPrompt,
-                        imageBase64: base64DataRaw,
-                        imageMimeType: mimeType
-                    };
-
-                    const response = await fetch('/api/generate-design', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Server returned status: ${response.status}`);
-                    }
-
-                    const result = await response.json();
-                    
-                    if (result.imageBase64) {
-                        const generatedImageUrl = `data:${result.imageMimeType};base64,${result.imageBase64}`;
-                        
-                        mainCanvas.classList.add('opacity-0');
-                        
-                        setTimeout(() => {
-                            showImageInCanvas(generatedImageUrl);
-                            
-                            resultBadge.classList.remove('hidden');
-                            downloadBtn.classList.remove('hidden');
-                            downloadBtn.classList.add('flex');
-                            
-                            downloadBtn.onclick = () => {
-                                const a = document.createElement('a');
-                                a.href = generatedImageUrl;
-                                a.download = 'otath-room-design.jpg';
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                            };
-                            
-                            showToast('تم إنشاء التصميم بنجاح!');
-                        }, 300);
-
-                    } else {
-                        console.error("Unexpected response structure:", result);
-                        showToast('عذراً، لم نتمكن من توليد الصورة. يرجى المحاولة بصورة مختلفة.', 'error');
-                        showImageInCanvas(baseImageBase64);
-                    }
-
-                } catch (error) {
-                    console.error("Generation error:", error);
-                    showToast('حدث خطأ في الاتصال بالخادم. يرجى المحاولة لاحقاً.', 'error');
-                    showImageInCanvas(baseImageBase64);
-                } finally {
-                    loadingOverlay.style.display = 'none';
-                    generateBtn.disabled = false;
-                }
-            });
-
-            function simulateProgressSteps() {
-                const step1 = document.getElementById('step-1');
-                const step2 = document.getElementById('step-2');
-                const step3 = document.getElementById('step-3');
-                
-                step1.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> تحليل أبعاد الغرفة';
-                step1.className = 'flex items-center gap-3 text-sm text-amber-600 font-medium';
-                
-                step2.innerHTML = '<i class="fa-regular fa-circle"></i> دمج قطع الأثاث...';
-                step2.className = 'flex items-center gap-3 text-sm text-stone-400 opacity-50 transition-opacity';
-                
-                step3.innerHTML = '<i class="fa-regular fa-circle"></i> ضبط الإضاءة والظلال';
-                step3.className = 'flex items-center gap-3 text-sm text-stone-400 opacity-50 transition-opacity';
-
-                setTimeout(() => {
-                    step1.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i> تم تحليل الغرفة';
-                    step1.className = 'flex items-center gap-3 text-sm text-stone-600';
-                    
-                    step2.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> دمج قطع الأثاث...';
-                    step2.className = 'flex items-center gap-3 text-sm text-amber-600 font-medium opacity-100';
-                }, 2500);
-
-                setTimeout(() => {
-                    step2.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i> تم دمج الأثاث';
-                    step2.className = 'flex items-center gap-3 text-sm text-stone-600';
-                    
-                    step3.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> وضع اللمسات النهائية...';
-                    step3.className = 'flex items-center gap-3 text-sm text-amber-600 font-medium opacity-100';
-                }, 6000);
-            }
-        });
-    </script>
+    <script src="/js/app.js"></script>
 </body>
 </html>
