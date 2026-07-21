@@ -559,11 +559,10 @@
                         imageMimeType: mimeType
                     };
 
-                    const response = await fetch('/api/generate-design', {
+                    const response = await fetch('https://otath.onrender.com/api/generate-design', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),
-                        timeout: 120000 // 2 minute timeout
                     });
 
                     if (!response.ok) {
