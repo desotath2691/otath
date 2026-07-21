@@ -10,11 +10,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Setup __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize Google Gen AI SDK using GEMINI_API_KEY from environment variables
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
   console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
@@ -26,7 +24,6 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve static frontend files from 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/api/generate-design', async (req, res) => {
@@ -42,7 +39,6 @@ app.post('/api/generate-design', async (req, res) => {
       additionalNotes
     } = req.body;
 
-    // Helper function to extract base64 data and mimeType
     const parseBase64Image = (rawImage) => {
       if (!rawImage) return null;
       let mimeType = 'image/jpeg';
@@ -58,7 +54,6 @@ app.post('/api/generate-design', async (req, res) => {
 
     const imageInput = parseBase64Image(image || imageData);
 
-    // Build systemic prompt context for interior design analysis/generation
     let fullPrompt = "أنت مصمم ديكور داخلي خبير ومحترف.";
     if (roomType) fullPrompt += ` نوع الغرفة: ${roomType}.`;
     if (style) fullPrompt += ` الطراز المطلوب: ${style}.`;
@@ -71,7 +66,6 @@ app.post('/api/generate-design', async (req, res) => {
       fullPrompt += " قدم اقتراحات عامة لنصائح التصميم الداخلي الحديث.";
     }
 
-    // Assemble input contents array
     const contents = [];
     contents.push(fullPrompt);
 
@@ -80,7 +74,7 @@ app.post('/api/generate-design', async (req, res) => {
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-image',
+      model: 'gemini-2.5-flash',
       contents: contents,
       config: {
         systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
@@ -88,8 +82,7 @@ app.post('/api/generate-design', async (req, res) => {
     });
 
     const textOutput = response.text || '';
-    
-    // Check if the response contains inline images (if model generated image output)
+
     let generatedImage = null;
     if (response.candidates?.[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
@@ -100,7 +93,6 @@ app.post('/api/generate-design', async (req, res) => {
       }
     }
 
-    // Return backwards-compatible response structure matching front-end needs
     return res.json({
       success: true,
       result: textOutput,
@@ -108,7 +100,7 @@ app.post('/api/generate-design', async (req, res) => {
       text: textOutput,
       image: generatedImage,
       imageUrl: generatedImage,
-      modelUsed: 'gemini-3.1-flash-image'
+      modelUsed: 'gemini-2.5-flash'
     });
 
   } catch (error) {
@@ -121,17 +113,15 @@ app.post('/api/generate-design', async (req, res) => {
   }
 });
 
-// Health check endpoint for Render
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'Otath Backend', model: 'gemini-3.1-flash-image' });
+  res.json({ status: 'ok', service: 'Otath Backend', model: 'gemini-2.5-flash' });
 });
 
-// Serve frontend index.html for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
-  console.log(`📱 Gemini SDK configured with model: gemini-3.1-flash-image`);
+  console.log(`📱 Gemini SDK configured with model: gemini-2.5-flash`);
 });
