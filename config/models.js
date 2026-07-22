@@ -1,5 +1,5 @@
 export const MODELS = {
-  TEXT: "gemini-3.5-flash",
+  TEXT: "gemini-2.5-flash",
   IMAGE: "imagen-3.0-generate-001"
 };
 
