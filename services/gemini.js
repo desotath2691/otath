@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-export async function generateImage(prompt: string): Promise<string> {
+export async function generateImage(prompt) {
   const response = await ai.models.generateContent({
     model: MODELS.IMAGE,
     contents: prompt,
