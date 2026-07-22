@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 
 // استدعاء الموجهات (Routes)
 import designRoutes from './routes/design.js';
-
+import productRoutes from './routes/products.js';
 dotenv.config();
 
 const app = express();
@@ -26,7 +26,7 @@ app.use('/products', express.static(path.join(__dirname, 'products')));
 
 // ربط مسارات التصميم بالخادم
 app.use('/api', designRoutes);
-
+app.use('/api/products', productRoutes);
 // فحص حالة الخادم
 app.get('/health', (req, res) => {
   res.json({ 
