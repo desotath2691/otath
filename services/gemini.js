@@ -1,5 +1,4 @@
 import { GoogleGenAI } from '@google/genai';
-import OpenAI from 'openai';
 import { MODELS } from '../config/models.js';
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -8,7 +7,6 @@ if (!apiKey) {
 }
 
 const ai = new GoogleGenAI({ apiKey: apiKey || '' });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
 
 // دالة توليد النص
 export const generateTextDesign = async (contents) => {
@@ -16,31 +14,36 @@ export const generateTextDesign = async (contents) => {
     model: MODELS.TEXT,
     contents: contents,
     config: {
-      systemInstruction: "أنت مساعد تصميم داخلي ذكي في منصة 'أوتاث' (Otath). هدفك تقديم حلول أتمتة وتوزيع ذكي للأثاث. قم بتقديم اقتراحات تحسين الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
+      systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
     }
   });
   return response.text || '';
 };
 
-// دالة توليد ودمج الصور عبر DALL-E 3
+// دالة توليد الصور باستخدام جيمناي مع حماية تمنع تعليق الموقع
 export const generateRoomImage = async (promptDescription) => {
   try {
-    const imagePrompt = `${promptDescription}, architectural presentation, photorealistic 8k, professional interior design render.`;
-    
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: imagePrompt.substring(0, 1000), 
-      n: 1,
-      size: "1024x1024"
+    const imagePrompt = typeof promptDescription === 'string' 
+      ? `${promptDescription}, architectural presentation, photorealistic 8k.` 
+      : `A high quality, professional interior design render, modern style, photorealistic 8k.`;
+
+    const imageResponse = await ai.models.generateImages({
+      model: MODELS.IMAGE,
+      prompt: imagePrompt,
+      config: {
+        numberOfImages: 1,
+        outputMimeType: 'image/jpeg',
+        aspectRatio: '1:1',
+      },
     });
 
-    if (response.data && response.data.length > 0) {
-      return response.data[0].url;
+    if (imageResponse.generatedImages && imageResponse.generatedImages.length > 0) {
+      const base64Data = imageResponse.generatedImages[0].image.imageBytes;
+      return `data:image/jpeg;base64,${base64Data}`;
     }
     return null;
-    
   } catch (error) {
-    console.error("❌ خطأ في توليد الصورة:", error);
-    throw error;
+    console.warn("⚠️ تم تجاوز خطوة الصورة مؤقتاً لتجنب تعليق الواجهة:", error.message);
+    return null; // يرجع قيمة فارغة بسلاسة دون أن ينهار الخادم
   }
 };
