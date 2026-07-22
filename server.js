@@ -28,6 +28,23 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 🌟 المسار الجديد: لمعرفة النماذج المتوفرة والمتوافقة مع الـ API الخاص بك
+app.get('/api/available-models', async (req, res) => {
+  try {
+    if (!apiKey) throw new Error("مفتاح API مفقود");
+    
+    // نستخدم fetch المدمج في Node.js للاتصال بنقطة النهاية الخاصة بقائمة النماذج
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const data = await response.json();
+    
+    // استخراج أسماء النماذج فقط وإرسالها
+    const modelNames = data.models ? data.models.map(m => m.name) : [];
+    res.json({ success: true, count: modelNames.length, models: modelNames });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'تعذر جلب قائمة النماذج', details: error.message });
+  }
+});
+
 app.post('/api/generate-design', async (req, res) => {
   try {
     // التحقق من وجود مفتاح API
@@ -79,9 +96,9 @@ app.post('/api/generate-design', async (req, res) => {
       contents.push(imageInput);
     }
 
-    const textModel = 'gemini-3.5-flash';
+    // 1️⃣ استخدام نموذج النص الحقيقي والمتوفر (يمكن تغييره إلى gemini-2.0-flash مستقبلاً)
+    const textModel = 'gemini-1.5-flash';
 
-    // 1️⃣ استدعاء Gemini لتحليل الغرفة وإنشاء الاقتراحات النصية
     const textResponse = await ai.models.generateContent({
       model: textModel,
       contents: contents,
@@ -92,13 +109,15 @@ app.post('/api/generate-design', async (req, res) => {
 
     const textOutput = textResponse.text || '';
 
-    // 2️⃣ استدعاء النموذج الجديد لتوليد الصورة الجمالية للتصميم
+    // 2️⃣ استخدام النموذج الصحيح لتوليد الصور
     let generatedImageBase64 = null;
+    const imageModel = 'imagen-3.0-generate-002';
+
     try {
       const imagePrompt = `A high quality, professional interior design render of a ${roomType || 'room'} in ${style || 'modern'} style, palette: ${colors || 'neutral'}, beautifully furnished and styled, architectural presentation, photorealistic 8k.`;
 
       const imageResponse = await ai.models.generateImages({
-        model: 'gemini-3-pro-image', // تم التحديث هنا
+        model: imageModel,
         prompt: imagePrompt,
         config: {
           numberOfImages: 1,
@@ -122,7 +141,7 @@ app.post('/api/generate-design', async (req, res) => {
       result: textOutput,
       text: textOutput,
       image: generatedImageBase64,
-      modelUsed: `${textModel} + gemini-3-pro-image` // تم التحديث هنا
+      modelUsed: `${textModel} + ${imageModel}`
     });
 
   } catch (error) {
@@ -139,7 +158,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'Otath Backend', 
-    models: ['gemini-3.5-flash', 'gemini-3-pro-image'], // تم التحديث هنا
+    models: ['gemini-1.5-flash', 'imagen-3.0-generate-002'], 
     apiKeyConfigured: !!process.env.GEMINI_API_KEY 
   });
 });
@@ -150,5 +169,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
-  console.log('📱 Gemini SDK configured with Gemini 3.5 Flash & Gemini 3 Pro Image'); // تم التحديث هنا
-}); // تم إصلاح قوس الإغلاق هنا
+  console.log('📱 Gemini SDK configured with valid API models');
+});
