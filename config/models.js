@@ -1,6 +1,6 @@
 export const MODELS = {
   TEXT: "gemini-1.5-flash",
-  IMAGE: "gemini-2.5-flash-image"
+  IMAGE: "imagen-3.0-generate-001" // أو imagen-4.0-generate-001 إذا كان مدعوماً في حسابك
 };
 
 export const APP_CONFIG = {
