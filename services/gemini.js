@@ -6,25 +6,22 @@ if (!apiKey) {
   console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
 }
 
-// قمنا هنا بإضافة الفكرة التي وجدتيها لإجبار الخادم على استخدام الإصدار v1
-const ai = new GoogleGenAI({ 
-  apiKey: apiKey || '',
-  httpOptions: { apiVersion: "v1" } 
-});
+// الاتصال المباشر والأساسي بجوجل (بدون إضافات v1 التي تسبب أخطاء فارغة)
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
-// دالة توليد النص
+// 1. دالة توليد النص (تعمل بكفاءة)
 export const generateTextDesign = async (contents) => {
   const response = await ai.models.generateContent({
     model: MODELS.TEXT,
     contents: contents,
     config: {
-      systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أوتاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
+      systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أوتاث' (Otath). هدفك تقديم حلول أتمتة وتوزيع ذكي للأثاث. قم بتقديم اقتراحات تحسين الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
     }
   });
   return response.text || '';
 };
 
-// دالة توليد الصور
+// 2. دالة توليد الصور (محمية بالكامل لتجنب قيود جوجل الحالية)
 export const generateRoomImage = async (promptDescription) => {
   try {
     const imagePrompt = typeof promptDescription === 'string' 
@@ -47,7 +44,8 @@ export const generateRoomImage = async (promptDescription) => {
     }
     return null;
   } catch (error) {
-    console.warn("⚠️ تم تجاوز خطوة الصورة مؤقتاً لتجنب تعليق الواجهة:", error.message);
+    // التقاط الخطأ بأمان إذا استمرت جوجل في الحجب، لكي لا ينهار موقع أوتاث
+    console.warn("⚠️ تم تجاوز خطوة الصورة بسبب قيود مفتاح Google:", error.message);
     return null; 
   }
 };
