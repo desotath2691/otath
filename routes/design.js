@@ -61,13 +61,18 @@ router.post('/generate-design', async (req, res) => {
     // 2️⃣ إرسال البيانات لتوليد النص (نصائح التوزيع والدمج)
     const textOutput = await generateTextDesign(contents);
 
-    // 3️⃣ توليد الصورة (تم تعديلها مؤقتاً لتتخطى قيود Google)
+    // 3️⃣ توليد الصورة بأمان لمنع تعليق الموقع
     let generatedImageBase64 = null;
     try {
-      // سنعيد صورة الغرفة الأصلية التي رفعها العميل مؤقتمْا لتكتمل التجربة وينتهي التحميل بنجاح
-      generatedImageBase64 = image || imageData || null;
+      // إذا فشلت الصورة أو تأخرت، نعيد صورة الغرفة التي رفعها العميل كي لا يعلق الموقع
+      generatedImageBase64 = await Promise.race([
+        generateRoomImage(roomType, style, colors),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 12000))
+      ]);
     } catch (imgError) {
-      console.error("Image generation failed:", imgError);
+      console.warn("⚠️ تم تجاوز خطوة الصورة لتجنب تعليق الواجهة:", imgError.message);
+      // إرجاع صورة العميل الأصلية لكي تكتمل شاشة التحميل بنجاح
+      generatedImageBase64 = image || imageData || null;
     }
 
     // 4️⃣ إرسال النتيجة النهائية للواجهة الأمامية
