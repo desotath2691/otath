@@ -97,7 +97,7 @@ app.post('/api/generate-design', async (req, res) => {
     }
 
     // 1️⃣ استخدام نموذج النص الحقيقي والمتوفر (يمكن تغييره إلى gemini-2.0-flash مستقبلاً)
-    const textModel = 'gemini-1.5-flash';
+    const textModel = 'gemini-2.5-flash';
 
     const textResponse = await ai.models.generateContent({
       model: textModel,
@@ -111,7 +111,7 @@ app.post('/api/generate-design', async (req, res) => {
 
     // 2️⃣ استخدام النموذج الصحيح لتوليد الصور
     let generatedImageBase64 = null;
-    const imageModel = 'imagen-3.0-generate-002';
+    const imageModel = 'imagen-4.0-fast-generate-001';
 
     try {
       const imagePrompt = `A high quality, professional interior design render of a ${roomType || 'room'} in ${style || 'modern'} style, palette: ${colors || 'neutral'}, beautifully furnished and styled, architectural presentation, photorealistic 8k.`;
@@ -131,7 +131,7 @@ app.post('/api/generate-design', async (req, res) => {
         generatedImageBase64 = `data:image/jpeg;base64,${base64Data}`;
       }
     } catch (imgError) {
-      console.error('⚠️ فشل توليد الصورة عبر النموذج:', imgError.message);
+      console.error(imgError);
       // يستمر الكود حتى لو فشلت الصورة ليرجع النص على الأقل للمستخدم
     }
 
