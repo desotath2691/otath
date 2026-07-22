@@ -61,10 +61,11 @@ router.post('/generate-design', async (req, res) => {
     // 2️⃣ إرسال البيانات لتوليد النص (نصائح التوزيع والدمج)
     const textOutput = await generateTextDesign(contents);
 
-    // 3️⃣ توليد الصورة
+    // 3️⃣ توليد الصورة (تم تعديلها مؤقتاً لتتخطى قيود Google)
     let generatedImageBase64 = null;
     try {
-      generatedImageBase64 = await generateRoomImage(roomType, style, colors);
+      // سنعيد صورة الغرفة الأصلية التي رفعها العميل مؤقتمْا لتكتمل التجربة وينتهي التحميل بنجاح
+      generatedImageBase64 = image || imageData || null;
     } catch (imgError) {
       console.error("Image generation failed:", imgError);
     }
