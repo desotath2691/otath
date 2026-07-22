@@ -79,7 +79,7 @@ app.post('/api/generate-design', async (req, res) => {
       contents.push(imageInput);
     }
 
-    const textModel = 'gemini-2.5-flash';
+    const textModel = 'gemini-3.5-flash';
 
     // 1️⃣ استدعاء Gemini لتحليل الغرفة وإنشاء الاقتراحات النصية
     const textResponse = await ai.models.generateContent({
@@ -92,13 +92,13 @@ app.post('/api/generate-design', async (req, res) => {
 
     const textOutput = textResponse.text || '';
 
-    // 2️⃣ استدعاء Imagen 3 لتوليد الصورة الجمالية للتصميم
+    // 2️⃣ استدعاء النموذج الجديد لتوليد الصورة الجمالية للتصميم
     let generatedImageBase64 = null;
     try {
       const imagePrompt = `A high quality, professional interior design render of a ${roomType || 'room'} in ${style || 'modern'} style, palette: ${colors || 'neutral'}, beautifully furnished and styled, architectural presentation, photorealistic 8k.`;
 
       const imageResponse = await ai.models.generateImages({
-        model: 'imagen-3.0-generate-001', // 👈 تم التعديل إلى الإصدار 001
+        model: 'gemini-3-pro-image', // تم التحديث هنا
         prompt: imagePrompt,
         config: {
           numberOfImages: 1,
@@ -112,7 +112,7 @@ app.post('/api/generate-design', async (req, res) => {
         generatedImageBase64 = `data:image/jpeg;base64,${base64Data}`;
       }
     } catch (imgError) {
-      console.error('⚠️ فشل توليد الصورة عبر Imagen:', imgError.message);
+      console.error('⚠️ فشل توليد الصورة عبر النموذج:', imgError.message);
       // يستمر الكود حتى لو فشلت الصورة ليرجع النص على الأقل للمستخدم
     }
 
@@ -122,7 +122,7 @@ app.post('/api/generate-design', async (req, res) => {
       result: textOutput,
       text: textOutput,
       image: generatedImageBase64,
-      modelUsed: `${textModel} + imagen-3.0-generate-001`
+      modelUsed: `${textModel} + gemini-3-pro-image` // تم التحديث هنا
     });
 
   } catch (error) {
@@ -139,7 +139,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'Otath Backend', 
-    models: ['gemini-2.5-flash', 'imagen-3.0-generate-001'],
+    models: ['gemini-3.5-flash', 'gemini-3-pro-image'], // تم التحديث هنا
     apiKeyConfigured: !!process.env.GEMINI_API_KEY 
   });
 });
@@ -150,5 +150,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
-  console.log('📱 Gemini SDK configured with Gemini & Imagen 3');
-});
+  console.log('📱 Gemini SDK configured with Gemini 3.5 Flash & Gemini 3 Pro Image'); // تم التحديث هنا
+}); // تم إصلاح قوس الإغلاق هنا
