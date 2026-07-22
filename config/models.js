@@ -1,6 +1,6 @@
 export const MODELS = {
-  TEXT: "gemini-1.5-flash",
-  IMAGE: "gemini-1.5-flash"
+  TEXT: "gemini-3.5-flash",
+  IMAGE: "imagen-4.0-fast-generate-001"
 };
 
 export const APP_CONFIG = {
