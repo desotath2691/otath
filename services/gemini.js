@@ -1,38 +1,42 @@
-export async function generateRoomImage(promptDescription) {
-  const MAX_RETRIES = 3; // عدد محاولات إعادة الاتصال
-  let attempt = 0;
+import { GoogleGenAI } from '@google/genai';
+import { MODELS } from '../config/models.js';
 
-  while (attempt < MAX_RETRIES) {
-    try {
-      const response = await ai.models.generateImages({
-        model: 'imagen-3.0-generate-001',
-        prompt: promptDescription,
-        config: {
-          numberOfImages: 1,
-          outputMimeType: 'image/jpeg',
-          aspectRatio: '1:1',
-        },
-      });
-
-      const base64ImageBytes = response.generatedImages[0].image.imageBytes;
-      return `data:image/jpeg;base64,${base64ImageBytes}`;
-      
-    } catch (error) {
-      // التحقق مما إذا كان الخطأ هو 503 (ضغط على الخوادم)
-      if (error.status === 503 || error.status === 'UNAVAILABLE') {
-        attempt++;
-        console.warn(`الخادم مزدحم. جاري إعادة المحاولة للمرة ${attempt}...`);
-        
-        // إذا استنفدنا المحاولات، نمرر الخطأ للواجهة
-        if (attempt === MAX_RETRIES) throw error; 
-        
-        // الانتظار قبل المحاولة التالية (2 ثانية، ثم 4 ثوانٍ...)
-        await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
-      } else {
-        // إذا كان الخطأ من نوع آخر (مثل 404)، يتم إيقاف المحاولة فوراً
-        console.error("خطأ في توليد الصورة:", error);
-        throw error;
-      }
-    }
-  }
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
 }
+
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
+
+// دالة توليد النص
+export const generateTextDesign = async (contents) => {
+  const response = await ai.models.generateContent({
+    model: MODELS.TEXT,
+    contents: contents,
+    config: {
+      systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
+    }
+  });
+  return response.text || '';
+};
+
+// دالة توليد ودمج الصور (سيتم تطويرها لاحقاً لدمج المنتجات عبر Inpainting)
+export const generateRoomImage = async (roomType, style, colors) => {
+  const imagePrompt = `A high quality, professional interior design render of a ${roomType || 'room'} in ${style || 'modern'} style, palette: ${colors || 'neutral'}, beautifully furnished and styled, architectural presentation, photorealistic 8k.`;
+  
+  const imageResponse = await ai.models.generateImages({
+    model: MODELS.IMAGE,
+    prompt: imagePrompt,
+    config: {
+      numberOfImages: 1,
+      outputMimeType: 'image/jpeg',
+      aspectRatio: '1:1',
+    },
+  });
+
+  if (imageResponse.generatedImages && imageResponse.generatedImages.length > 0) {
+    const base64Data = imageResponse.generatedImages[0].image.imageBytes;
+    return `data:image/jpeg;base64,${base64Data}`;
+  }
+  return null;
+};
