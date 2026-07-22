@@ -79,7 +79,7 @@ app.post('/api/generate-design', async (req, res) => {
       contents.push(imageInput);
     }
 
-    const textModel = 'gemini-3.5-flash';
+    const textModel = 'gemini-2.5-flash';
 
     // 1️⃣ استدعاء Gemini لتحليل الغرفة وإنشاء الاقتراحات النصية
     const textResponse = await ai.models.generateContent({
@@ -98,7 +98,7 @@ app.post('/api/generate-design', async (req, res) => {
       const imagePrompt = `A high quality, professional interior design render of a ${roomType || 'room'} in ${style || 'modern'} style, palette: ${colors || 'neutral'}, beautifully furnished and styled, architectural presentation, photorealistic 8k.`;
 
       const imageResponse = await ai.models.generateImages({
-        model: 'imagen-3.0-generate-002',
+        model: 'imagen-3.0-generate-001', // 👈 تم التعديل إلى الإصدار 001
         prompt: imagePrompt,
         config: {
           numberOfImages: 1,
@@ -121,8 +121,8 @@ app.post('/api/generate-design', async (req, res) => {
       success: true,
       result: textOutput,
       text: textOutput,
-      image: generatedImageBase64, // الصورة هنا تُحل مشكلة الرسالة الحمراء
-      modelUsed: `${textModel} + imagen-3.0-generate-002`
+      image: generatedImageBase64,
+      modelUsed: `${textModel} + imagen-3.0-generate-001`
     });
 
   } catch (error) {
@@ -139,7 +139,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     service: 'Otath Backend', 
-    models: ['gemini-3.5-flash', 'imagen-3.0-generate-002'],
+    models: ['gemini-2.5-flash', 'imagen-3.0-generate-001'],
     apiKeyConfigured: !!process.env.GEMINI_API_KEY 
   });
 });
@@ -150,5 +150,5 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
-  console.log('📱 Gemini SDK configured with Gemini 3.5 Flash & Imagen 3');
+  console.log('📱 Gemini SDK configured with Gemini & Imagen 3');
 });
