@@ -59,13 +59,7 @@ router.post('/generate-design', async (req, res) => {
     }
 
     // 2️⃣ إرسال البيانات لتوليد النص (نصائح التوزيع والدمج)
-    // 1️⃣ توليد النص (مع حماية من زحام سيرفرات جوجل 503)
-    let textOutput = "نعتذر، هناك ضغط كبير على خوادم الذكاء الاصطناعي في هذه اللحظة. يرجى المحاولة بعد قليل لإتمام تصميم مساحتك.";
-    try {
-      textOutput = await generateTextDesign(contents);
-    } catch (textError) {
-      console.warn("⚠️ تم تجاوز خطوة النص بسبب ضغط خوادم جوجل (503):", textError.message);
-    }
+    const textOutput = await generateTextDesign(contents);
 
     // 3️⃣ توليد الصورة بأمان لمنع تعليق الموقع
     let generatedImageBase64 = null;
