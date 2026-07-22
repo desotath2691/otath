@@ -1,41 +1,42 @@
 import { GoogleGenAI } from '@google/genai';
+import { MODELS } from '../config/models.js';
 
-// تهيئة العميل باستخدام مفتاح الـ API من متغيرات البيئة
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-// دالة توليد النص (العقل التحليلي)
-export async function generateTextDesign(promptText) {
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: promptText,
-    });
-    return response.text;
-  } catch (error) {
-    console.error("خطأ في توليد النص:", error);
-    throw error;
-  }
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
 }
 
-// دالة توليد الصور (الفنان)
-export async function generateRoomImage(promptDescription) {
-  try {
-    const response = await ai.models.generateImages({
-      model: 'imagen-3.0-generate-001',
-      prompt: promptDescription,
-      config: {
-        numberOfImages: 1,
-        outputMimeType: 'image/jpeg',
-        aspectRatio: '1:1',
-      },
-    });
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
-    // استخراج الصورة المולدة بصيغة Base64
-    const base64ImageBytes = response.generatedImages[0].image.imageBytes;
-    return `data:image/jpeg;base64,${base64ImageBytes}`;
-    
-  } catch (error) {
-    console.error("خطأ في توليد الصورة:", error);
-    throw error;
+// دالة توليد النص
+export const generateTextDesign = async (contents) => {
+  const response = await ai.models.generateContent({
+    model: MODELS.TEXT,
+    contents: contents,
+    config: {
+      systemInstruction: "أنت مساعد تصميم داخلي ذكي باسم 'أثاث' (Otath). قم بتقديم اقتراحات تحسين وتأثيث الديكور باللغة العربية بأسلوب راقٍ، منظم، ومفصل."
+    }
+  });
+  return response.text || '';
+};
+
+// دالة توليد ودمج الصور (سيتم تطويرها لاحقاً لدمج المنتجات عبر Inpainting)
+export const generateRoomImage = async (roomType, style, colors) => {
+  const imagePrompt = `A high quality, professional interior design render of a ${roomType || 'room'} in ${style || 'modern'} style, palette: ${colors || 'neutral'}, beautifully furnished and styled, architectural presentation, photorealistic 8k.`;
+  
+  const imageResponse = await ai.models.generateImages({
+    model: MODELS.IMAGE,
+    prompt: imagePrompt,
+    config: {
+      numberOfImages: 1,
+      outputMimeType: 'image/jpeg',
+      aspectRatio: '1:1',
+    },
+  });
+
+  if (imageResponse.generatedImages && imageResponse.generatedImages.length > 0) {
+    const base64Data = imageResponse.generatedImages[0].image.imageBytes;
+    return `data:image/jpeg;base64,${base64Data}`;
   }
-}
+  return null;
+};
