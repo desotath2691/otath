@@ -1,6 +1,6 @@
 export const MODELS = {
   TEXT: 'gemini-3.6-flash',
-  IMAGE: 'gemini-2.5-flash-image',
+  IMAGE: 'imagen-3.0-generate-001', // 👈 تم وضع الاسم الصحيح لنموذج الصور
 };
 
 export const APP_CONFIG = {
