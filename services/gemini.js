@@ -22,12 +22,12 @@ export const generateTextDesign = async (contents) => {
   return response.text || '';
 };
 
-// دالة توليد ودمج الصور مع الحفاظ على الغرفة الأصلية
+// دالة توليد ودمج الصور مع تعليمات صارمة للحفاظ على الغرفة والأثاث
 export const generateRoomImage = async (promptDescription, roomImageBase64 = null) => {
   try {
     const contents = [];
 
-    // إذا رفع العميل صورة الغرفة، نقوم بتجهيزها وإضافتها للطلب ليحافظ الذكاء الاصطناعي على المساحة
+    // إرفاق صورة الغرفة الأصلية إن وجدت
     if (roomImageBase64) {
       const matches = roomImageBase64.match(/^data:(.+);base64,(.+)$/);
       if (matches) {
@@ -40,9 +40,12 @@ export const generateRoomImage = async (promptDescription, roomImageBase64 = nul
       }
     }
 
-    // صياغة التعليمات بدقة ليحافظ النموذج على الغرفة الأصلية ويعدلها بقطع الأثاث المطلوبة
+    // تعليمات صارمة وحادة تمنع النموذج من تغيير الغرفة أو تشويه شكل الأثاث
     const imagePrompt = roomImageBase64
-      ? `Maintain the exact room layout, walls, flooring, and structure from the provided reference image. Professionally integrate and place the following furniture/design inside this exact room: ${promptDescription}, photorealistic 8k interior design, seamless blending.`
+      ? `Strict Image Editing Task: 
+1. You MUST preserve the exact room architecture, walls, flooring, windows, and perspective from the reference image without any alteration. Do not change the room layout.
+2. Place the exact furniture described below into the room precisely as specified, maintaining their exact shapes, proportions, and material details (such as chenille fabric) without inventing new or random designs: ${promptDescription}. 
+Photorealistic 8k, professional interior design render, seamless composition.`
       : `A high quality, professional interior design render, modern style, photorealistic 8k, showing: ${promptDescription}`;
 
     contents.push(imagePrompt);
