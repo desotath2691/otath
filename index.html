@@ -193,7 +193,10 @@
                         <i class="fa-solid fa-trash-can"></i> إزالة الصورة
                     </button>
                 </div>
-
+<!-- منطقة عرض النص الذكي (جديدة) -->
+                    <div id="ai-text-result" class="hidden mt-4 p-6 bg-stone-50 border border-stone-200 rounded-xl text-stone-700 text-sm leading-relaxed whitespace-pre-wrap shadow-inner overflow-y-auto max-h-[250px]">
+                        <!-- سيظهر نص الذكاء الاصطناعي هنا -->
+                    </div>
                 <div class="glass-panel p-6 rounded-2xl">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-8 h-8 rounded-full bg-stone-100 text-stone-900 flex items-center justify-center font-bold text-sm">2</div>
@@ -532,15 +535,17 @@
                 downloadBtn.classList.remove('flex');
                 resultBadge.classList.add('hidden');
                 
+                // إخفاء مربع النص في حال كان ظاهراً من محاولة سابقة
+                const aiTextResult = document.getElementById('ai-text-result');
+                if(aiTextResult) aiTextResult.classList.add('hidden');
+
                 // Animate fake progress steps
                 simulateProgressSteps();
 
                 // 2. Construct the AI Prompt
-                // Combine the specific AI prompts of selected products
                 const productsPrompt = selectedProducts.map(p => p.aiPrompt).join(' and ');
                 const userPrompt = promptInput.value.trim();
                 
-                // Base prompt focusing on photorealism and interior design
                 let fullPrompt = `Act as an expert interior designer and 3D architectural visualizer. Modify this photo of a room by seamlessly and realistically integrating the following furniture pieces into the space: ${productsPrompt}. Ensure perfect perspective, accurate scale/proportions, natural lighting, and realistic shadows that match the original room's environment. The final image should look like a real, unedited photograph of a high-end home.`;
                 
                 if (userPrompt) {
@@ -548,11 +553,9 @@
                 }
                 
                 try {
-                    // Extract base64 data and mime type for API
                     const base64DataRaw = baseImageBase64.split(',')[1];
                     const mimeType = baseImageBase64.split(';')[0].split(':')[1];
 
-                    // Prepare payload for backend
                     const payload = {
                         prompt: fullPrompt,
                         imageBase64: base64DataRaw,
@@ -571,21 +574,29 @@
 
                     const result = await response.json();
                     
+                    // --- التعديل السحري لمنع التعليق وعرض النص ---
+                    
+                    // عرض اقتراحات الديكور النصية فوراً إذا أرسلها الخادم
+                    if (aiTextResult && (result.text || result.textDesign)) {
+                        aiTextResult.textContent = result.text || result.textDesign;
+                        aiTextResult.classList.remove('hidden');
+                    }
+                    
+                    // التعامل مع الصورة
                     if (result.imageBase64) {
                         const generatedImageUrl = `data:${result.imageMimeType};base64,${result.imageBase64}`;
                         
-                        // Display result with smooth transition
-                        mainCanvas.classList.add('opacity-0'); // fade out old
+                        mainCanvas.classList.add('opacity-0'); 
                         
                         setTimeout(() => {
                             showImageInCanvas(generatedImageUrl);
                             
-                            // Show success UI elements
+                            resultBadge.innerHTML = '<i class="fa-solid fa-check text-green-500 ml-1"></i> اكتمل التصميم';
                             resultBadge.classList.remove('hidden');
+                            
                             downloadBtn.classList.remove('hidden');
                             downloadBtn.classList.add('flex');
                             
-                            // Setup download functionality
                             downloadBtn.onclick = () => {
                                 const a = document.createElement('a');
                                 a.href = generatedImageUrl;
@@ -598,18 +609,23 @@
                             showToast('تم إنشاء التصميم بنجاح!');
                         }, 300);
 
+                    } else if (result.text || result.textDesign) {
+                        // حالة النجاح في توليد النص مع تخطي الصورة بسبب قيود Google
+                        showImageInCanvas(baseImageBase64); // استعادة الصورة الأصلية
+                        resultBadge.innerHTML = '<i class="fa-solid fa-check text-amber-500 ml-1"></i> اكتمل التحليل النصي';
+                        resultBadge.classList.remove('hidden');
+                        showToast('تم تحليل المساحة بنجاح (تم تجاوز الصورة مؤقتاً).', 'info');
                     } else {
                         console.error("Unexpected response structure:", result);
-                        showToast('عذراً، لم نتمكن من توليد الصورة. يرجى المحاولة بصورة مختلفة.', 'error');
-                        showImageInCanvas(baseImageBase64); // Restore original
+                        showToast('عذراً، لم نتمكن من إتمام العملية. يرجى المحاولة بصورة مختلفة.', 'error');
+                        showImageInCanvas(baseImageBase64); 
                     }
 
                 } catch (error) {
                     console.error("Generation error:", error);
                     showToast('حدث خطأ في الاتصال بالخادم. يرجى المحاولة لاحقاً.', 'error');
-                    showImageInCanvas(baseImageBase64); // Restore original
+                    showImageInCanvas(baseImageBase64); 
                 } finally {
-                    // Hide loading state
                     loadingOverlay.style.display = 'none';
                     generateBtn.disabled = false;
                 }
