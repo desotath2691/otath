@@ -1,6 +1,6 @@
 export const MODELS = {
   TEXT: 'gemini-3.6-flash',
-  IMAGE: 'imagen-4.0-ultra-generate-001', // 👈 نموذج الجودة الفائقة المتاح لمفتاحك
+  IMAGE: 'gemini-3.1-flash-image', // 👈 النموذج الصحيح المتاح لحسابك
 };
 
 export const APP_CONFIG = {
