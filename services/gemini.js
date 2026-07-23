@@ -22,12 +22,12 @@ export const generateTextDesign = async (contents) => {
   return response.text || '';
 };
 
-// دالة دمج الأثاث بدقة مطلقة دون تغيير أو إضافة عناصر عشوائية
+// دالة دمج الأثاث مع تطبيق القواعد الصارمة (Strict Rules)
 export const generateRoomImage = async (promptDescription, roomImageBase64 = null) => {
   try {
     const contents = [];
 
-    // إرفاق صورة الغرفة الأصلية للعميل
+    // 1. إرفاق صورة الغرفة الأصلية
     if (roomImageBase64) {
       const matches = roomImageBase64.match(/^data:(.+);base64,(.+)$/);
       if (matches) {
@@ -40,16 +40,56 @@ export const generateRoomImage = async (promptDescription, roomImageBase64 = nul
       }
     }
 
-    // تعليمات صارمة تمنع إضافة أي قطع أخرى وتمنع تغير شكل الأثاث أو لونه
-    const imagePrompt = roomImageBase64
-      ? `Strict Virtual Staging Task:
-1. Preserve the user's uploaded room image (walls, floor, space, perspective) 100% as it is. Do NOT change the room layout.
-2. Insert ONLY the exact selected furniture piece described here: ${promptDescription}. 
-3. Do NOT add any extra furniture, tables, plants, or random items. Only the specified piece.
-4. Do NOT alter, modify, or redesign the shape, style, color, or fabric (such as chenille) of the selected furniture piece. Keep its exact design faithful to the description.
-Photorealistic 8k, seamless and natural blending.`
+    // 2. القواعد الصارمة التي كتبتها (تم إدراجها كدستور للنموذج)
+    const strictRules = `You are an AI interior designer specialized in photorealistic furniture placement.
+Your task is to place ONLY the selected furniture products from our store into the customer's uploaded room image.
+
+STRICT RULES (MUST FOLLOW):
+1. DO NOT modify the customer's room in any way.
+   - Do not change the room dimensions.
+   - Do not change the camera angle.
+   - Do not crop or zoom.
+   - Do not change walls, floor, ceiling, windows, doors, lighting, or decorations.
+   - Preserve the original perspective exactly.
+
+2. DO NOT modify the selected furniture product.
+   - Preserve the exact shape.
+   - Preserve the exact dimensions and proportions.
+   - Preserve the exact color.
+   - Preserve the exact fabric texture and material.
+   - Preserve every design detail.
+   - Do not redesign, simplify, or enhance the product.
+
+3. Place the furniture at realistic scale.
+   - Maintain correct real-world proportions relative to the room.
+   - Furniture must not appear too large or too small.
+   - Respect perspective and depth.
+
+4. Generate realistic contact shadows and natural lighting that match the original room.
+
+5. Do not invent furniture that was not selected.
+
+6. Do not remove existing room objects unless absolutely necessary because of furniture placement.
+
+7. If multiple products are selected, arrange them in a realistic interior design layout while respecting walking space.
+
+8. The final image must look like a real photograph, not an AI-generated rendering.
+
+Priority order:
+1. Preserve the customer's room exactly.
+2. Preserve the product exactly.
+3. Add realistic placement only.
+
+Goal:
+Create a photorealistic visualization showing exactly how the selected furniture would look inside the customer's real room without altering either the room or the furniture.
+
+SELECTED FURNITURE TO INSERT: ${promptDescription}`;
+
+    const imagePrompt = roomImageBase64 
+      ? strictRules 
       : `A high quality, professional interior design render, modern style, photorealistic 8k, showing: ${promptDescription}`;
 
+    // 3. إرسال الصورة والقواعد الصارمة للنموذج
     contents.push(imagePrompt);
 
     const response = await ai.models.generateContent({
@@ -57,7 +97,7 @@ Photorealistic 8k, seamless and natural blending.`
       contents: contents,
     });
 
-    // استخراج الصورة المولدة بدقة
+    // 4. استخراج الصورة بدقة
     const candidate = response.candidates?.[0];
     if (candidate?.content?.parts) {
       for (const part of candidate.content.parts) {
