@@ -1,6 +1,6 @@
 export const MODELS = {
   TEXT: 'gemini-3.6-flash',
-  IMAGE: 'imagen-4.0-generate-001', // 👈 الاسم السري الجديد والأقوى!
+  IMAGE: 'imagen-4.0-ultra-generate-001', // 👈 نموذج الجودة الفائقة المتاح لمفتاحك
 };
 
 export const APP_CONFIG = {
