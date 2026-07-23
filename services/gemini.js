@@ -6,10 +6,9 @@ if (!apiKey) {
   console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
 }
 
-// قمنا هنا بإضافة الفكرة التي وجدتيها لإجبار الخادم على استخدام الإصدار v1
+// أزلنا الإجبار على v1 لكي تستطيع الحزمة الوصول لنموذج الصور في v1beta
 const ai = new GoogleGenAI({ 
-  apiKey: apiKey || '',
-  httpOptions: { apiVersion: "v1" } 
+  apiKey: apiKey || ''
 });
 
 // دالة توليد النص
