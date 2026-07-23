@@ -8,16 +8,19 @@ const router = express.Router();
 
 router.post('/generate-design', async (req, res) => {
   try {
+    // 1️⃣ قمنا بإضافة imageBase64 ليتمكن الخادم من استلام الصورة من الواجهة
     const { 
-      prompt, image, imageData, roomType, style, colors, budget, additionalNotes,
+      prompt, image, imageData, imageBase64, imageMimeType, roomType, style, colors, budget, additionalNotes,
       selectedProductImage, selectedProductName 
     } = req.body;
 
-    const userRoomImageInput = parseBase64Image(image || imageData);
+    // توحيد مصدر الصورة ليعمل بسلاسة
+    const rawImage = imageBase64 || image || imageData;
+    const userRoomImageInput = parseBase64Image(rawImage);
 
-    // 1️⃣ إعداد الموجه (Prompt)
+    // إعداد الموجه (Prompt)
     let contents = [];
-    let finalPrompt = "";
+    let finalPrompt = prompt || ""; 
 
     if (selectedProductImage) {
       console.log(`🛋️ جاري تجهيز دمج المنتج: ${selectedProductName}`);
@@ -33,39 +36,47 @@ router.post('/generate-design', async (req, res) => {
         console.warn("⚠️ لم يتم العثور على صورة المنتج المحددة في مجلد products.");
       }
     } else {
-      finalPrompt = buildDesignPrompt(roomType, style, colors, budget, prompt, additionalNotes);
+      if(!finalPrompt) {
+          finalPrompt = buildDesignPrompt(roomType, style, colors, budget, prompt, additionalNotes);
+      }
       contents.push(finalPrompt);
       if (userRoomImageInput) contents.push(userRoomImageInput);
     }
 
-    // 2️⃣ توليد النص (مع حماية ضد خطأ 503)
+    // 2️⃣ توليد التحليل النصي الذكي
     let textOutput = "";
     try {
       textOutput = await generateTextDesign(contents);
     } catch (textError) {
       console.warn("⚠️ ضغط مؤقت على خوادم النص، تم استخدام النص البديل:", textError.message);
-      // نص بديل لكي لا ينهار الموقع إذا تأخر نموذج النصوص
-      textOutput = "تم استلام طلبك بنجاح. يقوم الذكاء الاصطناعي الآن بدمج قطع الأثاث في مساحتك بدقة...";
+      textOutput = "تم استلام طلبك بنجاح. نقوم الآن بتحليل مساحتك واختيار أنسب القطع من أوتاث لغرفتك...";
     }
 
-    // 3️⃣ توليد الصورة (مع رفع المهلة إلى 45 ثانية وتمرير الموجه الصحيح)
+    // 3️⃣ توليد الصورة
     let generatedImageBase64 = null;
     try {
-      generatedImageBase64 = await Promise.race([
-        generateRoomImage(finalPrompt), // تم التعديل لتمرير الموجه الصحيح
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 45000)) // 45 ثانية
+      let rawImageResponse = await Promise.race([
+        generateRoomImage(finalPrompt),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 45000))
       ]);
+      
+      // تنظيف الصورة إذا كانت تحتوي على رابط Data URI لأن الواجهة تضيفه بنفسها
+      if (rawImageResponse && rawImageResponse.startsWith('data:')) {
+         generatedImageBase64 = rawImageResponse.split(',')[1];
+      } else {
+         generatedImageBase64 = rawImageResponse;
+      }
     } catch (imgError) {
       console.warn("⚠️ تم تجاوز خطوة الصورة لتجنب تعليق الواجهة:", imgError.message);
-      generatedImageBase64 = image || imageData || null;
+      generatedImageBase64 = null; // نرسلها فارغة (null) لكي تفهم الواجهة أن تعرض النص فوراً
     }
 
-    // 4️⃣ إرسال النتيجة النهائية
+    // 4️⃣ إرسال النتيجة للواجهة بالأسماء المطابقة تماماً لما تتوقعه
     return res.json({
       success: true,
-      result: textOutput,
-      text: textOutput,
-      image: generatedImageBase64,
+      text: textOutput,              // الواجهة ستقرأ النص من هنا
+      imageBase64: generatedImageBase64, // الواجهة ستقرأ الصورة من هنا
+      imageMimeType: imageMimeType || 'image/jpeg',
       modelUsed: `${MODELS.TEXT} + ${MODELS.IMAGE}`
     });
 
