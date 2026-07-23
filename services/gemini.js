@@ -22,12 +22,12 @@ export const generateTextDesign = async (contents) => {
   return response.text || '';
 };
 
-// دالة توليد ودمج الصور مع تعليمات صارمة للحفاظ على الغرفة والأثاث
+// دالة دمج الأثاث بدقة مطلقة دون تغيير أو إضافة عناصر عشوائية
 export const generateRoomImage = async (promptDescription, roomImageBase64 = null) => {
   try {
     const contents = [];
 
-    // إرفاق صورة الغرفة الأصلية إن وجدت
+    // إرفاق صورة الغرفة الأصلية للعميل
     if (roomImageBase64) {
       const matches = roomImageBase64.match(/^data:(.+);base64,(.+)$/);
       if (matches) {
@@ -40,12 +40,14 @@ export const generateRoomImage = async (promptDescription, roomImageBase64 = nul
       }
     }
 
-    // تعليمات صارمة وحادة تمنع النموذج من تغيير الغرفة أو تشويه شكل الأثاث
+    // تعليمات صارمة تمنع إضافة أي قطع أخرى وتمنع تغير شكل الأثاث أو لونه
     const imagePrompt = roomImageBase64
-      ? `Strict Image Editing Task: 
-1. You MUST preserve the exact room architecture, walls, flooring, windows, and perspective from the reference image without any alteration. Do not change the room layout.
-2. Place the exact furniture described below into the room precisely as specified, maintaining their exact shapes, proportions, and material details (such as chenille fabric) without inventing new or random designs: ${promptDescription}. 
-Photorealistic 8k, professional interior design render, seamless composition.`
+      ? `Strict Virtual Staging Task:
+1. Preserve the user's uploaded room image (walls, floor, space, perspective) 100% as it is. Do NOT change the room layout.
+2. Insert ONLY the exact selected furniture piece described here: ${promptDescription}. 
+3. Do NOT add any extra furniture, tables, plants, or random items. Only the specified piece.
+4. Do NOT alter, modify, or redesign the shape, style, color, or fabric (such as chenille) of the selected furniture piece. Keep its exact design faithful to the description.
+Photorealistic 8k, seamless and natural blending.`
       : `A high quality, professional interior design render, modern style, photorealistic 8k, showing: ${promptDescription}`;
 
     contents.push(imagePrompt);
@@ -55,7 +57,7 @@ Photorealistic 8k, professional interior design render, seamless composition.`
       contents: contents,
     });
 
-    // استخراج الصورة المودجة بدقة
+    // استخراج الصورة المولدة بدقة
     const candidate = response.candidates?.[0];
     if (candidate?.content?.parts) {
       for (const part of candidate.content.parts) {
