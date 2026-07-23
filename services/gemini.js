@@ -6,7 +6,6 @@ if (!apiKey) {
   console.warn("⚠️ Warning: GEMINI_API_KEY is not set in environment variables.");
 }
 
-// أزلنا الإجبار على v1 لكي تستطيع الحزمة الوصول لنموذج الصور في v1beta
 const ai = new GoogleGenAI({ 
   apiKey: apiKey || ''
 });
@@ -23,27 +22,28 @@ export const generateTextDesign = async (contents) => {
   return response.text || '';
 };
 
-// دالة توليد الصور
+// دالة توليد الصور باستخدام النموذج الجديد المتوافق مع generateContent
 export const generateRoomImage = async (promptDescription) => {
   try {
     const imagePrompt = typeof promptDescription === 'string' 
-      ? `${promptDescription}, architectural presentation, photorealistic 8k.` 
+      ? `Generate a photorealistic 8k interior design image showing: ${promptDescription}` 
       : `A high quality, professional interior design render, modern style, photorealistic 8k.`;
 
-    const imageResponse = await ai.models.generateImages({
+    const response = await ai.models.generateContent({
       model: MODELS.IMAGE,
-      prompt: imagePrompt,
-      config: {
-        numberOfImages: 1,
-        outputMimeType: 'image/jpeg',
-        aspectRatio: '1:1',
-      },
+      contents: [imagePrompt],
     });
 
-    if (imageResponse.generatedImages && imageResponse.generatedImages.length > 0) {
-      const base64Data = imageResponse.generatedImages[0].image.imageBytes;
-      return `data:image/jpeg;base64,${base64Data}`;
+    // استخراج الصورة المולدة من الاستجابة
+    const candidate = response.candidates?.[0];
+    if (candidate?.content?.parts) {
+      for (const part of candidate.content.parts) {
+        if (part.inlineData && part.inlineData.data) {
+          return `data:${part.inlineData.mimeType || 'image/jpeg'};base64,${part.inlineData.data}`;
+        }
+      }
     }
+    
     return null;
   } catch (error) {
     console.warn("⚠️ تم تجاوز خطوة الصورة مؤقتاً لتجنب تعليق الواجهة:", error.message);
