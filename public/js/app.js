@@ -213,6 +213,11 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadBtn.classList.add('hidden');
         downloadBtn.classList.remove('flex');
         resultBadge.classList.add('hidden');
+
+        // إخفاء مربع النص في حال كان ظاهراً من محاولة سابقة
+        const aiTextResult = document.getElementById('ai-text-result');
+        if(aiTextResult) aiTextResult.classList.add('hidden');
+
         simulateProgressSteps();
 
         const productsPrompt = selectedProducts.map(p => p.aiPrompt).join(' and ');
@@ -239,11 +244,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(`Server returned status: ${response.status}`);
             }
             const result = await response.json();
+
+            // --- عرض النص فوراً إذا كان موجوداً ---
+            if (aiTextResult && (result.text || result.textDesign)) {
+                aiTextResult.textContent = result.text || result.textDesign;
+                aiTextResult.classList.remove('hidden');
+            }
+
             if (result.imageBase64) {
                 const generatedImageUrl = `data:${result.imageMimeType};base64,${result.imageBase64}`;
                 mainCanvas.classList.add('opacity-0');
                 setTimeout(() => {
                     showImageInCanvas(generatedImageUrl);
+                    
+                    resultBadge.innerHTML = '<i class="fa-solid fa-check text-green-500 ml-1"></i> اكتمل التصميم';
                     resultBadge.classList.remove('hidden');
                     downloadBtn.classList.remove('hidden');
                     downloadBtn.classList.add('flex');
@@ -257,8 +271,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
                     showToast('تم إنشاء التصميم بنجاح!');
                 }, 300);
+            } else if (result.text || result.textDesign) {
+                // حالة النجاح في توليد النص مع تخطي الصورة 
+                showImageInCanvas(baseImageBase64); // استعادة الصورة الأصلية
+                resultBadge.innerHTML = '<i class="fa-solid fa-check text-amber-500 ml-1"></i> اكتمل التحليل النصي';
+                resultBadge.classList.remove('hidden');
+                showToast('تم تحليل المساحة بنجاح (تم تجاوز الصورة مؤقتاً).', 'info');
             } else {
-                showToast('عذراً، لم نتمكن من توليد الصورة. يرجى المحاولة بصورة مختلفة.', 'error');
+                showToast('عذراً، لم نتمكن من إتمام العملية. يرجى المحاولة بصورة مختلفة.', 'error');
                 showImageInCanvas(baseImageBase64);
             }
         } catch (error) {
