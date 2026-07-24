@@ -22,82 +22,46 @@ export const generateTextDesign = async (contents) => {
   return response.text || '';
 };
 
-// دالة دمج الأثاث مع تطبيق القواعد الصارمة (Strict Rules)
+// دالة تحليل الغرفة وتوليد الصورة بدقة مطابقة
 export const generateRoomImage = async (promptDescription, roomImageBase64 = null) => {
   try {
-    const contents = [];
+    let roomDescription = "a modern living room with neutral walls and flooring";
 
-    // 1. إرفاق صورة الغرفة الأصلية
+    // الخطوة 1: إذا رفع العميل صورة غرفته، نقوم بتحليلها أولاً عبر نموذج الذكاء البصري
     if (roomImageBase64) {
       const matches = roomImageBase64.match(/^data:(.+);base64,(.+)$/);
-      if (matches) {
-        contents.push({
-          inlineData: {
-            mimeType: matches[1],
-            data: matches[2]
-          }
-        });
+      const mimeType = matches ? matches[1] : 'image/jpeg';
+      const data = matches ? matches[2] : roomImageBase64;
+
+      const visionResponse = await ai.models.generateContent({
+        model: MODELS.TEXT,
+        contents: [
+          {
+            inlineData: { mimeType, data }
+          },
+          "Analyze this room image and describe its exact interior style, wall color, flooring type, and lighting in English concisely."
+        ]
+      });
+      
+      if (visionResponse.text) {
+        roomDescription = visionResponse.text;
       }
     }
 
-    // 2. القواعد الصارمة التي كتبتها (تم إدراجها كدستور للنموذج)
-    const strictRules = `You are an AI interior designer specialized in photorealistic furniture placement.
-Your task is to place ONLY the selected furniture products from our store into the customer's uploaded room image.
+    // الخطوة 2: صياغة أمر دقيق يدمج تفاصيل غرفة العميل الحقيقية مع قطعة الأثاث المختارة
+    const finalPrompt = `A photorealistic 8k interior design render, showing a room with these exact characteristics: ${roomDescription}. 
+Placed naturally inside this room is ONLY the following furniture product from our store: ${promptDescription}.
+Strict Rules:
+- Do NOT alter the room's walls, floor, or layout style described above.
+- Preserve the exact shape, color, and chenille fabric texture of the selected furniture.
+- Professional lighting, realistic contact shadows, real photograph quality.`;
 
-STRICT RULES (MUST FOLLOW):
-1. DO NOT modify the customer's room in any way.
-   - Do not change the room dimensions.
-   - Do not change the camera angle.
-   - Do not crop or zoom.
-   - Do not change walls, floor, ceiling, windows, doors, lighting, or decorations.
-   - Preserve the original perspective exactly.
-
-2. DO NOT modify the selected furniture product.
-   - Preserve the exact shape.
-   - Preserve the exact dimensions and proportions.
-   - Preserve the exact color.
-   - Preserve the exact fabric texture and material.
-   - Preserve every design detail.
-   - Do not redesign, simplify, or enhance the product.
-
-3. Place the furniture at realistic scale.
-   - Maintain correct real-world proportions relative to the room.
-   - Furniture must not appear too large or too small.
-   - Respect perspective and depth.
-
-4. Generate realistic contact shadows and natural lighting that match the original room.
-
-5. Do not invent furniture that was not selected.
-
-6. Do not remove existing room objects unless absolutely necessary because of furniture placement.
-
-7. If multiple products are selected, arrange them in a realistic interior design layout while respecting walking space.
-
-8. The final image must look like a real photograph, not an AI-generated rendering.
-
-Priority order:
-1. Preserve the customer's room exactly.
-2. Preserve the product exactly.
-3. Add realistic placement only.
-
-Goal:
-Create a photorealistic visualization showing exactly how the selected furniture would look inside the customer's real room without altering either the room or the furniture.
-
-SELECTED FURNITURE TO INSERT: ${promptDescription}`;
-
-    const imagePrompt = roomImageBase64 
-      ? strictRules 
-      : `A high quality, professional interior design render, modern style, photorealistic 8k, showing: ${promptDescription}`;
-
-    // 3. إرسال الصورة والقواعد الصارمة للنموذج
-    contents.push(imagePrompt);
-
+    // الخطوة 3: إرسال الوصف الشامل لنموذج توليد الصور
     const response = await ai.models.generateContent({
       model: MODELS.IMAGE,
-      contents: contents,
+      contents: [finalPrompt],
     });
 
-    // 4. استخراج الصورة بدقة
     const candidate = response.candidates?.[0];
     if (candidate?.content?.parts) {
       for (const part of candidate.content.parts) {
@@ -109,7 +73,7 @@ SELECTED FURNITURE TO INSERT: ${promptDescription}`;
     
     return null;
   } catch (error) {
-    console.warn("⚠️ تم تجاوز خطوة الصورة مؤقتاً لتجنب تعليق الواجهة:", error.message);
+    console.warn("⚠️ خطأ في توليد الصورة:", error.message);
     return null; 
   }
 };
