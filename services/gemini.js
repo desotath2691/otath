@@ -22,7 +22,7 @@ export const generateTextDesign = async (contents) => {
   return response.text || '';
 };
 
-// دالة تحليل الغرفة وتوليد الصورة المربعة بدقة
+// دالة تحليل الغرفة وتوليد الصورة المربعة بصرامة
 export const generateRoomImage = async (promptDescription, roomImageBase64 = null) => {
   try {
     let roomDescription = "a modern living room with neutral walls and flooring";
@@ -47,19 +47,21 @@ export const generateRoomImage = async (promptDescription, roomImageBase64 = nul
       }
     }
 
-    const finalPrompt = `A photorealistic 8k interior design render, showing a room with these exact characteristics: ${roomDescription}. 
-Placed naturally inside this room is ONLY the following furniture product from our store: ${promptDescription}.
+    // 👈 هنا قمنا بتغيير جذري في الأوامر لإجبار النموذج على المقاس المربع
+    const finalPrompt = `[FORMAT: PERFECT 1:1 SQUARE IMAGE]. A perfectly square, photorealistic 8k interior design render. 
+Room characteristics: ${roomDescription}. 
+Placed naturally inside this room is ONLY this furniture piece: ${promptDescription}.
 Strict Rules:
-- Do NOT alter the room's walls, floor, or layout style described above.
+- YOU MUST GENERATE A 1:1 SQUARE IMAGE.
+- Do NOT alter the room's walls or layout.
 - Preserve the exact shape, color, and chenille fabric texture of the selected furniture.
-- Professional lighting, realistic contact shadows, real photograph quality.`;
+- Professional lighting and realistic contact shadows.`;
 
-    // 👈 هنا تمت إضافة إعدادات المقاس الإجباري (1:1)
     const response = await ai.models.generateContent({
       model: MODELS.IMAGE,
       contents: [finalPrompt],
       config: {
-        aspectRatio: "1:1" // هذا السطر يجبر النموذج على إنتاج صورة مربعة
+        aspectRatio: "1:1" // التأكيد البرمجي
       }
     });
 
