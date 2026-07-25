@@ -1,3 +1,67 @@
+// 1. دالة إزالة الخلفية البيضاء من صورة المنتج برمجياً
+const removeWhiteBackground = (imageSrc) => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240) {
+                    data[i + 3] = 0; // جعل الخلفية البيضاء شفافة تماماً
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = reject;
+        img.src = imageSrc;
+    });
+};
+
+// 2. دالة دمج الأثاث مفرغ الخلفية داخل مساحة الغرفة في متصفح العميل
+const compositeImages = async (roomImageBase64, selectedProducts) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const roomImg = new Image();
+    await new Promise(r => { roomImg.onload = r; roomImg.src = roomImageBase64; });
+    
+    canvas.width = roomImg.width;
+    canvas.height = roomImg.height;
+    ctx.drawImage(roomImg, 0, 0);
+    
+    for (const product of selectedProducts) {
+        try {
+            const transparentSrc = await removeWhiteBackground(product.imageUrl);
+            
+            const prodImg = new Image();
+            await new Promise(r => { prodImg.onload = r; prodImg.src = transparentSrc; });
+            
+            const scale = (canvas.width * 0.4) / prodImg.width;
+            const newWidth = prodImg.width * scale;
+            const newHeight = prodImg.height * scale;
+            
+            const x = (canvas.width - newWidth) / 2; 
+            const y = canvas.height - newHeight - (canvas.height * 0.15); 
+            
+            ctx.drawImage(prodImg, x, y, newWidth, newHeight);
+        } catch (err) {
+            console.error("خطأ في دمج صورة المنتج:", err);
+        }
+    }
+    
+    return canvas.toDataURL('image/jpeg', 0.9);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const uploadZone = document.getElementById('upload-zone');
     const imageInput = document.getElementById('image-input');
@@ -214,75 +278,75 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadBtn.classList.remove('flex');
         resultBadge.classList.add('hidden');
 
-        // إخفاء مربع النص في حال كان ظاهراً من محاولة سابقة
         const aiTextResult = document.getElementById('ai-text-result');
         if(aiTextResult) aiTextResult.classList.add('hidden');
 
         simulateProgressSteps();
 
-        const productsPrompt = selectedProducts.map(p => p.aiPrompt).join(' and ');
-        const userPrompt = promptInput.value.trim();
-        let fullPrompt = `Act as an expert interior designer and 3D architectural visualizer. Modify this photo of a room by seamlessly and realistically integrating the following furniture pieces into the space: ${productsPrompt}. Ensure perfect perspective, accurate scale/proportions, natural lighting, and realistic shadows that match the original room's environment. The final image should look like a real, unedited photograph of a high-end home.`;
-        if (userPrompt) {
-            fullPrompt += ` Additional specific customer request: ${userPrompt}.`;
-        }
-        
         try {
-            const base64DataRaw = baseImageBase64.split(',')[1];
-            const mimeType = baseImageBase64.split(';')[0].split(':')[1];
+            // دمج الأثاث مفرغ الخلفية برمجياً مع مساحة الغرفة
+            const compositedImageBase64 = await compositeImages(baseImageBase64, selectedProducts);
+            showImageInCanvas(compositedImageBase64);
+
+            const userPrompt = promptInput.value.trim();
+            let fullPrompt = `This image already contains the furniture placed in the room. YOUR ONLY TASK is to adjust the lighting, add realistic contact shadows under the furniture, and harmonize the colors so it looks like a single photorealistic 8k photograph. 
+STRICT RULES:
+- DO NOT change the shape, dimensions, or exact color of the furniture.
+- DO NOT alter the chenille fabric texture.
+- DO NOT change the room walls or floor.`;
+
+            if (userPrompt) {
+                fullPrompt += ` Focus on: ${userPrompt}.`;
+            }
+            
+            const base64DataRaw = compositedImageBase64.split(',')[1];
+            const mimeType = compositedImageBase64.split(';')[0].split(':')[1];
+            
             const payload = {
                 prompt: fullPrompt,
                 imageBase64: base64DataRaw,
                 imageMimeType: mimeType
             };
+            
             const response = await fetch('/api/generate-design', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!response.ok) {
-                throw new Error(`Server returned status: ${response.status}`);
-            }
+            
+            if (!response.ok) throw new Error(`Server status: ${response.status}`);
             const result = await response.json();
 
-            // --- عرض النص فوراً إذا كان موجوداً ---
             if (aiTextResult && (result.text || result.textDesign)) {
                 aiTextResult.textContent = result.text || result.textDesign;
                 aiTextResult.classList.remove('hidden');
             }
 
             if (result.imageBase64) {
-                const generatedImageUrl = `data:${result.imageMimeType};base64,${result.imageBase64}`;
+                const finalImageUrl = `data:${result.imageMimeType};base64,${result.imageBase64}`;
                 mainCanvas.classList.add('opacity-0');
                 setTimeout(() => {
-                    showImageInCanvas(generatedImageUrl);
-                    
+                    showImageInCanvas(finalImageUrl);
                     resultBadge.innerHTML = '<i class="fa-solid fa-check text-green-500 ml-1"></i> اكتمل التصميم';
                     resultBadge.classList.remove('hidden');
                     downloadBtn.classList.remove('hidden');
                     downloadBtn.classList.add('flex');
+                    
                     downloadBtn.onclick = () => {
                         const a = document.createElement('a');
-                        a.href = generatedImageUrl;
-                        a.download = 'otath-room-design.jpg';
+                        a.href = finalImageUrl;
+                        a.download = 'otath-design-final.jpg';
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
                     };
-                    showToast('تم إنشاء التصميم بنجاح!');
+                    showToast('تم ضبط الإضاءة والظلال بنجاح!');
                 }, 300);
-            } else if (result.text || result.textDesign) {
-                // حالة النجاح في توليد النص مع تخطي الصورة 
-                showImageInCanvas(baseImageBase64); // استعادة الصورة الأصلية
-                resultBadge.innerHTML = '<i class="fa-solid fa-check text-amber-500 ml-1"></i> اكتمل التحليل النصي';
-                resultBadge.classList.remove('hidden');
-                showToast('تم تحليل المساحة بنجاح (تم تجاوز الصورة مؤقتاً).', 'info');
             } else {
-                showToast('عذراً، لم نتمكن من إتمام العملية. يرجى المحاولة بصورة مختلفة.', 'error');
-                showImageInCanvas(baseImageBase64);
+                showToast('تم الدمج بنجاح، ولكن لم نتمكن من تطبيق الإضاءة عبر الذكاء الاصطناعي.', 'info');
             }
         } catch (error) {
-            showToast('حدث خطأ في الاتصال بالخادم. يرجى المحاولة لاحقاً.', 'error');
+            showToast('حدث خطأ أثناء معالجة الصورة. يرجى المحاولة لاحقاً.', 'error');
             showImageInCanvas(baseImageBase64);
         } finally {
             loadingOverlay.style.display = 'none';
