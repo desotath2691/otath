@@ -59,7 +59,21 @@ router.post('/generate-design', async (req, res) => {
         generateRoomImage(finalPrompt),
         new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 45000))
       ]);
-      
+      // أضف هذا المسار داخل ملف routes/design.js
+router.get('/proxy-image', async (req, res) => {
+    try {
+        const imageUrl = req.query.url;
+        if (!imageUrl) return res.status(400).send('URL is required');
+        
+        const response = await fetch(imageUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        
+        res.setHeader('Content-Type', response.headers.get('content-type') || 'image/jpeg');
+        res.send(Buffer.from(arrayBuffer));
+    } catch (error) {
+        res.status(500).send('Failed to proxy image');
+    }
+});
       // تنظيف الصورة إذا كانت تحتوي على رابط Data URI لأن الواجهة تضيفه بنفسها
       if (rawImageResponse && rawImageResponse.startsWith('data:')) {
          generatedImageBase64 = rawImageResponse.split(',')[1];
