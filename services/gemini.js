@@ -60,6 +60,9 @@ Strict Rules:
     const response = await ai.models.generateContent({
       model: MODELS.IMAGE,
       contents: [finalPrompt],
+      config: {
+        aspectRatio: "1:1" // 👈 هذا السطر يجبر الذكاء الاصطناعي على توليد صورة مربعة
+      }
     });
 
     const candidate = response.candidates?.[0];
