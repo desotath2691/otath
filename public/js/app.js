@@ -284,27 +284,67 @@ document.addEventListener('DOMContentLoaded', () => {
         simulateProgressSteps();
 
         try {
-            // دمج الأثاث الحقيقي مفرغ الخلفية برمجياً فوق مساحة الغرفة الأصلية بدقة مطابقة 100%
+            // دمج الأثاث مفرغ الخلفية برمجياً مع مساحة الغرفة
             const compositedImageBase64 = await compositeImages(baseImageBase64, selectedProducts);
-            
             showImageInCanvas(compositedImageBase64);
 
-            resultBadge.innerHTML = '<i class="fa-solid fa-check text-green-500 ml-1"></i> اكتمل التصميم بدقة مطابقة';
-            resultBadge.classList.remove('hidden');
-            downloadBtn.classList.remove('hidden');
-            downloadBtn.classList.add('flex');
+            const userPrompt = promptInput.value.trim();
+            let fullPrompt = `This image already contains the furniture placed in the room. YOUR ONLY TASK is to adjust the lighting, add realistic contact shadows under the furniture, and harmonize the colors so it looks like a single photorealistic 8k photograph. 
+STRICT RULES:
+- DO NOT change the shape, dimensions, or exact color of the furniture.
+- DO NOT alter the chenille fabric texture.
+- DO NOT change the room walls or floor.`;
+
+            if (userPrompt) {
+                fullPrompt += ` Focus on: ${userPrompt}.`;
+            }
             
-            downloadBtn.onclick = () => {
-                const a = document.createElement('a');
-                a.href = compositedImageBase64;
-                a.download = 'otath-design-final.jpg';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+            const base64DataRaw = compositedImageBase64.split(',')[1];
+            const mimeType = compositedImageBase64.split(';')[0].split(':')[1];
+            
+            const payload = {
+                prompt: fullPrompt,
+                imageBase64: base64DataRaw,
+                imageMimeType: mimeType
             };
             
-            showToast('تم دمج المنتج في غرفتك بنجاح مطابق 100%!');
+            const response = await fetch('/api/generate-design', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) throw new Error(`Server status: ${response.status}`);
+            const result = await response.json();
 
+            if (aiTextResult && (result.text || result.textDesign)) {
+                aiTextResult.textContent = result.text || result.textDesign;
+                aiTextResult.classList.remove('hidden');
+            }
+
+            if (result.imageBase64) {
+                const finalImageUrl = `data:${result.imageMimeType};base64,${result.imageBase64}`;
+                mainCanvas.classList.add('opacity-0');
+                setTimeout(() => {
+                    showImageInCanvas(finalImageUrl);
+                    resultBadge.innerHTML = '<i class="fa-solid fa-check text-green-500 ml-1"></i> اكتمل التصميم';
+                    resultBadge.classList.remove('hidden');
+                    downloadBtn.classList.remove('hidden');
+                    downloadBtn.classList.add('flex');
+                    
+                    downloadBtn.onclick = () => {
+                        const a = document.createElement('a');
+                        a.href = finalImageUrl;
+                        a.download = 'otath-design-final.jpg';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    };
+                    showToast('تم ضبط الإضاءة والظلال بنجاح!');
+                }, 300);
+            } else {
+                showToast('تم الدمج بنجاح، ولكن لم نتمكن من تطبيق الإضاءة عبر الذكاء الاصطناعي.', 'info');
+            }
         } catch (error) {
             showToast('حدث خطأ أثناء معالجة الصورة. يرجى المحاولة لاحقاً.', 'error');
             showImageInCanvas(baseImageBase64);
@@ -323,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
         step1.className = 'flex items-center gap-3 text-sm text-amber-600 font-medium';
         step2.innerHTML = '<i class="fa-regular fa-circle"></i> دمج قطع الأثاث...';
         step2.className = 'flex items-center gap-3 text-sm text-stone-400 opacity-50 transition-opacity';
-        step3.innerHTML = '<i class="fa-regular fa-circle"></i> وضع اللمسات النهائية';
+        step3.innerHTML = '<i class="fa-regular fa-circle"></i> ضبط الإضاءة والظلال';
         step3.className = 'flex items-center gap-3 text-sm text-stone-400 opacity-50 transition-opacity';
 
         setTimeout(() => {
@@ -331,13 +371,13 @@ document.addEventListener('DOMContentLoaded', () => {
             step1.className = 'flex items-center gap-3 text-sm text-stone-600';
             step2.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> دمج قطع الأثاث...';
             step2.className = 'flex items-center gap-3 text-sm text-amber-600 font-medium opacity-100';
-        }, 1500);
+        }, 2500);
 
         setTimeout(() => {
             step2.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i> تم دمج الأثاث';
             step2.className = 'flex items-center gap-3 text-sm text-stone-600';
-            step3.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> إعداد الصورة النهائية...';
+            step3.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> وضع اللمسات النهائية...';
             step3.className = 'flex items-center gap-3 text-sm text-amber-600 font-medium opacity-100';
-        }, 3000);
+        }, 6000);
     }
 });
