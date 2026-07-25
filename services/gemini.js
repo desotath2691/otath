@@ -22,12 +22,11 @@ export const generateTextDesign = async (contents) => {
   return response.text || '';
 };
 
-// دالة تحليل الغرفة وتوليد الصورة بدقة مطابقة
+// دالة تحليل الغرفة وتوليد الصورة المربعة بدقة
 export const generateRoomImage = async (promptDescription, roomImageBase64 = null) => {
   try {
     let roomDescription = "a modern living room with neutral walls and flooring";
 
-    // الخطوة 1: إذا رفع العميل صورة غرفته، نقوم بتحليلها أولاً عبر نموذج الذكاء البصري
     if (roomImageBase64) {
       const matches = roomImageBase64.match(/^data:(.+);base64,(.+)$/);
       const mimeType = matches ? matches[1] : 'image/jpeg';
@@ -48,7 +47,6 @@ export const generateRoomImage = async (promptDescription, roomImageBase64 = nul
       }
     }
 
-    // الخطوة 2: صياغة أمر دقيق يدمج تفاصيل غرفة العميل الحقيقية مع قطعة الأثاث المختارة
     const finalPrompt = `A photorealistic 8k interior design render, showing a room with these exact characteristics: ${roomDescription}. 
 Placed naturally inside this room is ONLY the following furniture product from our store: ${promptDescription}.
 Strict Rules:
@@ -56,12 +54,12 @@ Strict Rules:
 - Preserve the exact shape, color, and chenille fabric texture of the selected furniture.
 - Professional lighting, realistic contact shadows, real photograph quality.`;
 
-    // الخطوة 3: إرسال الوصف الشامل لنموذج توليد الصور
+    // 👈 هنا تمت إضافة إعدادات المقاس الإجباري (1:1)
     const response = await ai.models.generateContent({
       model: MODELS.IMAGE,
       contents: [finalPrompt],
       config: {
-        aspectRatio: "1:1" // 👈 هذا السطر يجبر الذكاء الاصطناعي على توليد صورة مربعة
+        aspectRatio: "1:1" // هذا السطر يجبر النموذج على إنتاج صورة مربعة
       }
     });
 
