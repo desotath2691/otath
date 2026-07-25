@@ -35,7 +35,7 @@ const removeWhiteBackground = (imageSrc) => {
     });
 };
 
-// 2. دالة الدمج مع الحفاظ على الأبعاد الواقعية دون تشويه
+// 2. دالة الدمج مع الحفاظ على الأبعاد الواقعية، التوسيط، وإضافة ظلال واقعية للأرضية
 const compositeImages = async (roomImageBase64, selectedProducts) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -45,14 +45,14 @@ const compositeImages = async (roomImageBase64, selectedProducts) => {
     
     canvas.width = roomImg.width;
     canvas.height = roomImg.height;
+    
+    // رسم صورة الغرفة
     ctx.drawImage(roomImg, 0, 0);
     
-    // ضبط المقياس: نجعل أكبر قطعة (مثل الكنب 160 سم) تأخذ حوالي 45% من عرض الغرفة لتبدو ضخمة وواقعية
+    // زيادة الحجم قليلاً ليأخذ الكنب مساحة أكبر من العرض (55% بدلاً من 45%)
     const referenceWidthCm = 160; 
-    const desiredCanvasWidthPixels = canvas.width * 0.45; 
+    const desiredCanvasWidthPixels = canvas.width * 0.55; 
     const cmToPixel = desiredCanvasWidthPixels / referenceWidthCm;
-    
-    let offsetX = canvas.width * 0.15; // إزاحة مبدئية من اليسار
     
     for (const product of selectedProducts) {
         try {
@@ -61,30 +61,35 @@ const compositeImages = async (roomImageBase64, selectedProducts) => {
             const prodImg = new Image();
             await new Promise(r => { prodImg.onload = r; prodImg.src = transparentSrc; });
             
-            // 1. حساب العرض بناءً على السنتيمتر الحقيقي
             const newWidth = product.widthCm * cmToPixel;
-            
-            // 2. السر هنا ⚠️: حساب الارتفاع بناءً على نسبة أبعاد الصورة الأصلية لمنع الانضغاط (Squash)
             const imageAspectRatio = prodImg.height / prodImg.width;
             const newHeight = newWidth * imageAspectRatio;
             
-            // 3. تعديل موقع الأثاث ليكون منطقياً
-            const x = offsetX; 
-            // إذا كانت طاولة، نجعلها تتقدم للأمام (لأسفل الصورة) لتبدو أمام الكنب
-            const yOffset = product.category === 'طاولات' ? (canvas.height * 0.08) : 0;
-            const y = canvas.height - newHeight - (canvas.height * 0.05) + yOffset; 
+            // توسيط الأثاث في منتصف الغرفة
+            const x = (canvas.width - newWidth) / 2; 
+            const y = canvas.height - newHeight - (canvas.height * 0.12); 
             
+            // 🌟 السحر هنا: إضافة ظل واقعي تحت الأثاث لدمجه مع الأرضية (Contact Shadow) 🌟
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'; // لون الظل (أسود شفاف واقعي)
+            ctx.shadowBlur = 40; // نعومة انتشار الظل على الأرض
+            ctx.shadowOffsetX = 0; 
+            ctx.shadowOffsetY = 25; // دفع الظل للأسفل ليوحي بأن القطعة تجلس على الأرض
+            
+            // رسم القطعة مع الظل
             ctx.drawImage(prodImg, x, y, newWidth, newHeight);
             
-            // ترك مسافة للقطعة التالية
-            offsetX += newWidth + (canvas.width * 0.02);
+            // إعادة ضبط إعدادات الظل حتى لا تتأثر القطع الأخرى (إن وجدت)
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
             
         } catch (err) {
             console.error("خطأ في دمج صورة المنتج:", err);
         }
     }
     
-    return canvas.toDataURL('image/jpeg', 0.9);
+    return canvas.toDataURL('image/jpeg', 0.95); // جودة صورة عالية 95%
 };
 
 document.addEventListener('DOMContentLoaded', () => {
