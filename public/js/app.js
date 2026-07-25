@@ -28,7 +28,7 @@ const removeWhiteBackground = (imageSrc) => {
     });
 };
 
-// 2. دالة دمج الأثاث مفرغ الخلفية داخل مساحة الغرفة في متصفح العميل
+// 2. دالة دمج الأثاث بناءً على الأبعاد الحقيقية (بالسنتيمتر) لتظهر المقاسات متناسقة وواقعية
 const compositeImages = async (roomImageBase64, selectedProducts) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -40,6 +40,8 @@ const compositeImages = async (roomImageBase64, selectedProducts) => {
     canvas.height = roomImg.height;
     ctx.drawImage(roomImg, 0, 0);
     
+    let offsetX = canvas.width * 0.1; // نقطة البداية الأفقية لتوزيع القطع إذا تم اختيار أكثر من قطعة
+    
     for (const product of selectedProducts) {
         try {
             const transparentSrc = await removeWhiteBackground(product.imageUrl);
@@ -47,14 +49,23 @@ const compositeImages = async (roomImageBase64, selectedProducts) => {
             const prodImg = new Image();
             await new Promise(r => { prodImg.onload = r; prodImg.src = transparentSrc; });
             
-            const scale = (canvas.width * 0.4) / prodImg.width;
-            const newWidth = prodImg.width * scale;
-            const newHeight = prodImg.height * scale;
+            // معادلة القياس الهندسي الواقعي بناءً على الأبعاد الحقيقية بالسنتيمتر
+            // نفترض افتراضياً أن عرض الغرفة المرئي يمثل 400 سم كمعيار للمنظور
+            const roomVirtualWidthCm = 400; 
+            const scaleFactor = canvas.width / roomVirtualWidthCm;
             
-            const x = (canvas.width - newWidth) / 2; 
+            const newWidth = product.widthCm * scaleFactor;
+            const newHeight = product.heightCm * scaleFactor;
+            
+            // وضع المنتج باحترافية على أرضية الغرفة في الثلث السفلي
+            const x = offsetX; 
             const y = canvas.height - newHeight - (canvas.height * 0.15); 
             
             ctx.drawImage(prodImg, x, y, newWidth, newHeight);
+            
+            // ترك مسافة أفقية متناسبة للقطعة التالية إذا تم اختيار منتجات متعددة
+            offsetX += newWidth + (canvas.width * 0.05);
+            
         } catch (err) {
             console.error("خطأ في دمج صورة المنتج:", err);
         }
@@ -82,11 +93,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let baseImageBase64 = null;
     let selectedProducts = [];
 
+    // 3. تحديث قائمة المنتجات لتشمل الأبعاد الحقيقية الدقيقة بالسنتيمتر
     const otathProducts = [
         {
             id: 'green-american-sofa-2seater',
             name: 'كنب أمريكي ثنائي مميز باللون الأخضر',
             category: 'جلوس',
+            widthCm: 160,
+            heightCm: 85,
             imageUrl: 'https://cdn.salla.sa/QWgA/dcecbd68-c925-4442-966f-0f1d9cfd3507-1000x1000-XOgfpww34ogMhM9eKn7LGB12u55y1d7HtDwNNfXh.jpg',
             aiPrompt: 'A premium American-style two-seater sofa upholstered in elegant green fabric with a modern design'
         },
@@ -94,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'gray-lounge-chair',
             name: 'كرسي داخلي رمادي فاتح بتصميم مريح',
             category: 'جلوس',
+            widthCm: 85,
+            heightCm: 90,
             imageUrl: 'https://cdn.salla.sa/QWgA/babbc5ea-cb18-4513-8f29-b8c275b5af99-1000x666.66666666667-BddnYkF9DNAcVR1uKWQKot09H8z1fl2xsKnIEaRl.png',
             aiPrompt: 'A comfortable light gray upholstered lounge chair with a modern minimalist design'
         },
@@ -101,6 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'marble-coffee-table-gold',
             name: 'طقم طاولة ضيافة رخام أبيض/قاعدة ذهبي',
             category: 'طاولات',
+            widthCm: 110,
+            heightCm: 45,
             imageUrl: 'https://cdn.salla.sa/QWgA/8vNBh59aWwgtad5lZfwA9VOStqflr6oOrmeU9r03.png',
             aiPrompt: 'A luxury white marble coffee table set with elegant gold metal legs'
         },
@@ -108,6 +126,8 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'clothes-rack-gray',
             name: 'علاقة ملابس أرضية معدنية بلون رمادي – تصميم أنيق',
             category: 'ديكور',
+            widthCm: 60,
+            heightCm: 170,
             imageUrl: 'https://cdn.salla.sa/QWgA/229408b8-18bc-4928-bcb7-2d3e5e46b4fe-1000x1000-fdf4OlM7Ch0h6e0Y7gUV3UN91T27viRuqzKGDlbm.png',
             aiPrompt: 'A modern gray metal freestanding clothes rack with a minimalist design'
         },
@@ -115,6 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'floor-lamp-marble',
             name: 'إضاءة أرضية بتصميم كروي فاخر وقاعدة رخامية',
             category: 'إضاءة',
+            widthCm: 40,
+            heightCm: 160,
             imageUrl: 'https://cdn.salla.sa/QWgA/26fb96e1-bef8-4685-afc8-d3b736368da3-1000x1000-6dPDIydZE29prnqTDv9OMw8TfsGoR3SfgbkM6UdD.png',
             aiPrompt: 'A luxury floor lamp with a spherical glass shade and a marble base'
         },
@@ -122,6 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
             id: 'bed-white-king',
             name: 'سرير معدني أبيض ملكي – أكبر مساحة نوم للراحة القصوى مقاس 180x200 سم',
             category: 'غرف نوم',
+            widthCm: 180,
+            heightCm: 110,
             imageUrl: 'https://cdn.salla.sa/QWgA/7a866997-964b-43b0-8347-0c8ddc03bf17-1000x1000-x9euu2zmfwz6fbHzXQ8wXExtgb0PpDEFDLzp49yp.png',
             aiPrompt: 'A luxurious white metal king-size bed with a modern design'
         }
@@ -285,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
         simulateProgressSteps();
 
         try {
-            // تنفيذ الدمج البرمجي عبر الوسيط الآمن
+            // تنفيذ الدمج البرمجي مع مقاسات الأبعاد الحقيقية
             const compositedImageBase64 = await compositeImages(baseImageBase64, selectedProducts);
             
             showImageInCanvas(compositedImageBase64);
