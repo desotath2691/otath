@@ -1,4 +1,4 @@
-// 1. دالة إزالة الخلفية البيضاء مع تمرير الصورة عبر الوسيط البرمجي لتجنب مشاكل CORS
+// 1. تحسين دالة إزالة الخلفية لتقص الحواف البيضاء المزعجة بقوة أكبر
 const removeWhiteBackground = (imageSrc) => {
     return new Promise((resolve, reject) => {
         const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(imageSrc)}`;
@@ -16,8 +16,15 @@ const removeWhiteBackground = (imageSrc) => {
             const data = imageData.data;
             
             for (let i = 0; i < data.length; i += 4) {
-                if (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240) {
-                    data[i + 3] = 0; // جعل الخلفية البيضاء شفافة تماماً
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                
+                // توسيع نطاق القص ليشمل الحواف الرمادية الفاتحة الناتجة عن تظليل الصورة
+                if (r > 225 && g > 225 && b > 225) {
+                    data[i + 3] = 0; // جعلها شفافة تماماً
+                } else if (r > 210 && g > 210 && b > 210) {
+                    data[i + 3] = 120; // تنعيم الحواف (شبه شفافة)
                 }
             }
             ctx.putImageData(imageData, 0, 0);
@@ -28,7 +35,7 @@ const removeWhiteBackground = (imageSrc) => {
     });
 };
 
-// 2. دالة دمج الأثاث بناءً على الأبعاد الحقيقية (بالسنتيمتر) لتظهر المقاسات متناسقة وواقعية
+// 2. دالة الدمج مع الحفاظ على الأبعاد الواقعية دون تشويه
 const compositeImages = async (roomImageBase64, selectedProducts) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -40,7 +47,12 @@ const compositeImages = async (roomImageBase64, selectedProducts) => {
     canvas.height = roomImg.height;
     ctx.drawImage(roomImg, 0, 0);
     
-    let offsetX = canvas.width * 0.1; // نقطة البداية الأفقية لتوزيع القطع إذا تم اختيار أكثر من قطعة
+    // ضبط المقياس: نجعل أكبر قطعة (مثل الكنب 160 سم) تأخذ حوالي 45% من عرض الغرفة لتبدو ضخمة وواقعية
+    const referenceWidthCm = 160; 
+    const desiredCanvasWidthPixels = canvas.width * 0.45; 
+    const cmToPixel = desiredCanvasWidthPixels / referenceWidthCm;
+    
+    let offsetX = canvas.width * 0.15; // إزاحة مبدئية من اليسار
     
     for (const product of selectedProducts) {
         try {
@@ -49,22 +61,23 @@ const compositeImages = async (roomImageBase64, selectedProducts) => {
             const prodImg = new Image();
             await new Promise(r => { prodImg.onload = r; prodImg.src = transparentSrc; });
             
-            // معادلة القياس الهندسي الواقعي بناءً على الأبعاد الحقيقية بالسنتيمتر
-            // نفترض افتراضياً أن عرض الغرفة المرئي يمثل 400 سم كمعيار للمنظور
-            const roomVirtualWidthCm = 400; 
-            const scaleFactor = canvas.width / roomVirtualWidthCm;
+            // 1. حساب العرض بناءً على السنتيمتر الحقيقي
+            const newWidth = product.widthCm * cmToPixel;
             
-            const newWidth = product.widthCm * scaleFactor;
-            const newHeight = product.heightCm * scaleFactor;
+            // 2. السر هنا ⚠️: حساب الارتفاع بناءً على نسبة أبعاد الصورة الأصلية لمنع الانضغاط (Squash)
+            const imageAspectRatio = prodImg.height / prodImg.width;
+            const newHeight = newWidth * imageAspectRatio;
             
-            // وضع المنتج باحترافية على أرضية الغرفة في الثلث السفلي
+            // 3. تعديل موقع الأثاث ليكون منطقياً
             const x = offsetX; 
-            const y = canvas.height - newHeight - (canvas.height * 0.15); 
+            // إذا كانت طاولة، نجعلها تتقدم للأمام (لأسفل الصورة) لتبدو أمام الكنب
+            const yOffset = product.category === 'طاولات' ? (canvas.height * 0.08) : 0;
+            const y = canvas.height - newHeight - (canvas.height * 0.05) + yOffset; 
             
             ctx.drawImage(prodImg, x, y, newWidth, newHeight);
             
-            // ترك مسافة أفقية متناسبة للقطعة التالية إذا تم اختيار منتجات متعددة
-            offsetX += newWidth + (canvas.width * 0.05);
+            // ترك مسافة للقطعة التالية
+            offsetX += newWidth + (canvas.width * 0.02);
             
         } catch (err) {
             console.error("خطأ في دمج صورة المنتج:", err);
@@ -93,7 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let baseImageBase64 = null;
     let selectedProducts = [];
 
-    // 3. تحديث قائمة المنتجات لتشمل الأبعاد الحقيقية الدقيقة بالسنتيمتر
     const otathProducts = [
         {
             id: 'green-american-sofa-2seater',
@@ -102,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
             widthCm: 160,
             heightCm: 85,
             imageUrl: 'https://cdn.salla.sa/QWgA/dcecbd68-c925-4442-966f-0f1d9cfd3507-1000x1000-XOgfpww34ogMhM9eKn7LGB12u55y1d7HtDwNNfXh.jpg',
-            aiPrompt: 'A premium American-style two-seater sofa upholstered in elegant green fabric with a modern design'
+            aiPrompt: 'A premium American-style two-seater sofa...'
         },
         {
             id: 'gray-lounge-chair',
@@ -111,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
             widthCm: 85,
             heightCm: 90,
             imageUrl: 'https://cdn.salla.sa/QWgA/babbc5ea-cb18-4513-8f29-b8c275b5af99-1000x666.66666666667-BddnYkF9DNAcVR1uKWQKot09H8z1fl2xsKnIEaRl.png',
-            aiPrompt: 'A comfortable light gray upholstered lounge chair with a modern minimalist design'
+            aiPrompt: 'A comfortable light gray upholstered lounge chair...'
         },
         {
             id: 'marble-coffee-table-gold',
@@ -120,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             widthCm: 110,
             heightCm: 45,
             imageUrl: 'https://cdn.salla.sa/QWgA/8vNBh59aWwgtad5lZfwA9VOStqflr6oOrmeU9r03.png',
-            aiPrompt: 'A luxury white marble coffee table set with elegant gold metal legs'
+            aiPrompt: 'A luxury white marble coffee table set...'
         },
         {
             id: 'clothes-rack-gray',
@@ -129,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             widthCm: 60,
             heightCm: 170,
             imageUrl: 'https://cdn.salla.sa/QWgA/229408b8-18bc-4928-bcb7-2d3e5e46b4fe-1000x1000-fdf4OlM7Ch0h6e0Y7gUV3UN91T27viRuqzKGDlbm.png',
-            aiPrompt: 'A modern gray metal freestanding clothes rack with a minimalist design'
+            aiPrompt: 'A modern gray metal freestanding clothes rack...'
         },
         {
             id: 'floor-lamp-marble',
@@ -138,16 +150,16 @@ document.addEventListener('DOMContentLoaded', () => {
             widthCm: 40,
             heightCm: 160,
             imageUrl: 'https://cdn.salla.sa/QWgA/26fb96e1-bef8-4685-afc8-d3b736368da3-1000x1000-6dPDIydZE29prnqTDv9OMw8TfsGoR3SfgbkM6UdD.png',
-            aiPrompt: 'A luxury floor lamp with a spherical glass shade and a marble base'
+            aiPrompt: 'A luxury floor lamp...'
         },
         {
             id: 'bed-white-king',
-            name: 'سرير معدني أبيض ملكي – أكبر مساحة نوم للراحة القصوى مقاس 180x200 سم',
+            name: 'سرير معدني أبيض ملكي مقاس 180x200 سم',
             category: 'غرف نوم',
             widthCm: 180,
             heightCm: 110,
             imageUrl: 'https://cdn.salla.sa/QWgA/7a866997-964b-43b0-8347-0c8ddc03bf17-1000x1000-x9euu2zmfwz6fbHzXQ8wXExtgb0PpDEFDLzp49yp.png',
-            aiPrompt: 'A luxurious white metal king-size bed with a modern design'
+            aiPrompt: 'A luxurious white metal king-size bed...'
         }
     ];
 
@@ -238,11 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (file.size > 5 * 1024 * 1024) {
-            showToast('حجم الصورة كبير جداً. الحد الأقصى 5 ميجابايت.', 'error');
-            return;
-        }
-
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onloadend = function() {
@@ -303,18 +310,13 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadBtn.classList.remove('flex');
         resultBadge.classList.add('hidden');
 
-        const aiTextResult = document.getElementById('ai-text-result');
-        if(aiTextResult) aiTextResult.classList.add('hidden');
-
         simulateProgressSteps();
 
         try {
-            // تنفيذ الدمج البرمجي مع مقاسات الأبعاد الحقيقية
             const compositedImageBase64 = await compositeImages(baseImageBase64, selectedProducts);
-            
             showImageInCanvas(compositedImageBase64);
 
-            resultBadge.innerHTML = '<i class="fa-solid fa-check text-green-500 ml-1"></i> اكتمل التصميم بدقة مطابقة';
+            resultBadge.innerHTML = '<i class="fa-solid fa-check text-green-500 ml-1"></i> اكتمل التصميم';
             resultBadge.classList.remove('hidden');
             downloadBtn.classList.remove('hidden');
             downloadBtn.classList.add('flex');
@@ -322,18 +324,17 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadBtn.onclick = () => {
                 const a = document.createElement('a');
                 a.href = compositedImageBase64;
-                a.download = 'otath-design-final.jpg';
+                a.download = 'otath-design.jpg';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
             };
             
-            showToast('تم دمج المنتج في غرفتك بنجاح مطابق 100%!');
+            showToast('تم دمج المنتج بنجاح وبحجمه الواقعي!');
 
         } catch (error) {
             console.error(error);
-            showToast('حدث خطأ أثناء معالجة الصورة. يرجى المحاولة لاحقاً.', 'error');
-            showImageInCanvas(baseImageBase64);
+            showToast('حدث خطأ أثناء المعالجة.', 'error');
         } finally {
             loadingOverlay.style.display = 'none';
             generateBtn.disabled = false;
@@ -345,25 +346,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const step2 = document.getElementById('step-2');
         const step3 = document.getElementById('step-3');
         
-        step1.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> تحليل أبعاد الغرفة';
-        step1.className = 'flex items-center gap-3 text-sm text-amber-600 font-medium';
-        step2.innerHTML = '<i class="fa-regular fa-circle"></i> دمج قطع الأثاث...';
-        step2.className = 'flex items-center gap-3 text-sm text-stone-400 opacity-50 transition-opacity';
-        step3.innerHTML = '<i class="fa-regular fa-circle"></i> وضع اللمسات النهائية';
-        step3.className = 'flex items-center gap-3 text-sm text-stone-400 opacity-50 transition-opacity';
+        step1.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> تحليل الأبعاد...';
+        step2.innerHTML = '<i class="fa-regular fa-circle text-stone-400"></i>';
+        step3.innerHTML = '<i class="fa-regular fa-circle text-stone-400"></i>';
 
         setTimeout(() => {
-            step1.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i> تم تحليل الغرفة';
-            step1.className = 'flex items-center gap-3 text-sm text-stone-600';
-            step2.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> دمج قطع الأثاث...';
-            step2.className = 'flex items-center gap-3 text-sm text-amber-600 font-medium opacity-100';
-        }, 1500);
+            step1.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i> الأبعاد جاهزة';
+            step2.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> دمج الأثاث...';
+        }, 1000);
 
         setTimeout(() => {
-            step2.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i> تم دمج الأثاث';
-            step2.className = 'flex items-center gap-3 text-sm text-stone-600';
-            step3.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-600"></i> إعداد الصورة النهائية...';
-            step3.className = 'flex items-center gap-3 text-sm text-amber-600 font-medium opacity-100';
-        }, 3000);
+            step2.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i> تم الدمج';
+            step3.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i> جاهز!';
+        }, 2000);
     }
 });
